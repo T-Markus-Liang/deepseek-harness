@@ -167,6 +167,66 @@ describe('dsh-tool-subagent-control', () => {
     expect(prompts).toEqual(['long work', 'also consider Y'])
   })
 
+  it('reads an inactive child result without resuming it', async () => {
+    const { ctx, parent } = await setup([textResponse('final answer')])
+    const started = await ctx.subagents.startContinuable({
+      provider: 'spawn',
+      label: 'child task',
+      request: { prompt: [{ type: 'text', text: 'child task' }], parent },
+      signal: testToolSignal,
+    })
+    await waitNoActivation(ctx, started.childId)
+
+    const result = await callTool(ctx, 'get_agent_result', { subagent_id: started.childId }, parent)
+
+    expect(result.isError).toBe(false)
+    expect(JSON.parse(text(result))).toEqual({
+      activity: 'inactive',
+      output: [{ type: 'text', text: 'final answer' }],
+      stopReason: 'completed',
+    })
+    expect(ctx.agents.get(started.childId)).toBeUndefined()
+  })
+
+  it('reads an active child without stopping or resuming it', async () => {
+    const hold = Promise.withResolvers<undefined>()
+    const adapter = new GatedAdapter([{ chunks: textResponse('working'), gate: hold.promise }])
+    const { ctx, parent } = await setupWith(adapter)
+    const started = await ctx.subagents.startContinuable({
+      provider: 'spawn',
+      label: 'child task',
+      request: { prompt: [{ type: 'text', text: 'child task' }], parent },
+      signal: testToolSignal,
+    })
+    await vi.waitFor(() => { expect(adapter.requests).toHaveLength(1) })
+
+    const result = await callTool(ctx, 'get_agent_result', { subagent_id: started.childId }, parent)
+
+    expect(result.isError).toBe(false)
+    expect(JSON.parse(text(result))).toEqual({ activity: 'active', output: [] })
+    expect(ctx.agents.get(started.childId)?.status).toBe('running')
+    hold.resolve(undefined)
+    await waitNoActivation(ctx, started.childId)
+  })
+
+  it('rejects result reads from a caller other than the direct parent', async () => {
+    const { ctx, parent } = await setup([textResponse('answer')])
+    const started = await ctx.subagents.startContinuable({
+      provider: 'spawn',
+      label: 'child task',
+      request: { prompt: [{ type: 'text', text: 'child task' }], parent },
+      signal: testToolSignal,
+    })
+    await waitNoActivation(ctx, started.childId)
+    const stranger = ctx.agentLoop.create(SessionId('result-stranger'), { provider: 'mock', model: 'mock' })
+
+    const result = await callTool(ctx, 'get_agent_result', { subagent_id: started.childId }, stranger)
+
+    expect(result.isError).toBe(true)
+    expect(text(result)).toContain('another parent session')
+    expect(ctx.agents.get(started.childId)).toBeUndefined()
+  })
+
   it('reports a delivery failure as an errored, not-delivered result', async () => {
     const { ctx, parent } = await setup([])
     const result = await callTool(ctx, 'send_message', {
@@ -210,9 +270,11 @@ describe('dsh-tool-subagent-control', () => {
     await ctx.plugin(SubagentRuntime)
     const fiber = await ctx.plugin(tool)
     expect(ctx.tools.schemas().some(schema => schema.name === 'send_message')).toBe(true)
+    expect(ctx.tools.schemas().some(schema => schema.name === 'get_agent_result')).toBe(true)
     expect(ctx.tools.schemas().some(schema => schema.name === 'interrupt_agent')).toBe(true)
     await fiber.dispose()
     expect(ctx.tools.schemas().some(schema => schema.name === 'send_message')).toBe(false)
+    expect(ctx.tools.schemas().some(schema => schema.name === 'get_agent_result')).toBe(false)
     expect(ctx.tools.schemas().some(schema => schema.name === 'interrupt_agent')).toBe(false)
   })
 
@@ -232,6 +294,7 @@ describe('dsh-tool-subagent-control interrupt_agent', () => {
     const props = (schemas[0]!.parameters as { properties?: Record<string, unknown> }).properties ?? {}
     expect(Object.keys(props)).toEqual(['agent_id'])
     expect(schemas[0]!.description).toContain('current turn')
+    expect(schemas[0]!.description).toContain('result distinguishes')
     expect(schemas[0]!.description).toContain('send_message')
   })
 
@@ -374,9 +437,10 @@ describe('dsh-tool-subagent-control interrupt_agent', () => {
 
     const settled = await callTool(ctx, 'interrupt_agent', { agent_id: started.childId }, parent)
     expect(settled.isError).toBe(false)
-    expect(text(settled)).toBe(`interrupt requested for agent ${started.childId}`)
+    expect(text(settled)).toBe(`agent ${started.childId} has no live continuable activation; no interrupt was sent`)
     const unknown = await callTool(ctx, 'interrupt_agent', { agent_id: 'no-such-agent' }, parent)
     expect(unknown.isError).toBe(false)
+    expect(text(unknown)).toBe('agent no-such-agent has no live continuable activation; no interrupt was sent')
     // No cold resume: the settled target never rematerialized.
     expect(ctx.agents.get(started.childId)).toBeUndefined()
   })

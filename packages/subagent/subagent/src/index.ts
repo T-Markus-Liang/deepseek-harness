@@ -59,6 +59,7 @@ import type {
   ContinuableStartSpec,
   SubagentFollowupOptions,
   SubagentInterruptAuthority,
+  SubagentInterruptOutcome,
   SubagentReportOptions,
 } from './continuation.ts'
 import SubagentActivationSetupRegistry from './activation-setup-registry.ts'
@@ -67,6 +68,8 @@ import { listChildren as listSubagentChildren, listDescendants as listSubagentDe
 import type { SubagentDescendantListEntry, SubagentListEntry } from './list-children.ts'
 import { snapshotSubagentDescriptor } from './descriptor.ts'
 import { subagentIdentityProjectionDefinition, subagentTimingProjectionDefinition } from './projection.ts'
+import { readSubagentResult } from './read-result.ts'
+import type { SubagentConversationResult } from './read-result.ts'
 
 export * from './out-of-process.ts'
 export { AssistantOutputFold, finalAssistantOutput } from './assistant-output.ts'
@@ -124,6 +127,7 @@ export type {
 export type { ContinuableSetupContribution } from './activation-setup-registry.ts'
 export type { SubagentDescendantListEntry, SubagentListEntry } from './list-children.ts'
 export type { SubagentRunEndInfo, SubagentRunInfo } from './types.ts'
+export type { SubagentConversationResult } from './read-result.ts'
 export type { SubagentIdentityProjection, SubagentTimingProjection } from './projection-types.ts'
 
 declare module '@deepseek-ai/cordis' {
@@ -238,22 +242,45 @@ export class SubagentRuntime extends Service {
   }
 
   /**
+   * Read one direct continuable child's latest recorded assistant result without
+   * resuming it, sending a message, or changing its inbox.
+   * @param parent - exact live direct parent authorizing this read.
+   * @param childId - durable child session id.
+   * @param signal - cancellation for a cold persistence inspection.
+   * @returns the live-preferred result and current Activation activity.
+   */
+  async readResult(
+    parent: Agent,
+    childId: SessionId,
+    signal?: AbortSignal,
+  ): Promise<SubagentConversationResult> {
+    return readSubagentResult(
+      this.ctx,
+      parent,
+      childId,
+      this.continuations?.isActive(childId) ?? false,
+      signal,
+    )
+  }
+
+  /**
    * Interrupt one live continuable child's current turn under a human parent
    * address or an exact live ancestor Agent. Fire-and-return: the cancel
    * signal is issued before this returns, but the target may keep running
    * until it observes the signal. Unclaimed pending inbox work, the Activation,
    * and published descendants are preserved; claimed work is not requeued.
    * Once the interrupted driver is idle, a waking send resumes the parked FIFO
-   * queue. An absent target — including a one-shot or unknown id —
-   * is an accepted no-op, as is a manager-less composition, which cannot own a
-   * live Activation.
+   * queue. An absent target — including a one-shot or unknown id — returns
+   * `not-live`; a disposing target returns `already-settled`; a manager-less
+   * composition also returns `not-live` because it cannot own a live Activation.
    * @param targetSessionId - the durable child session id to interrupt.
    * @param authority - the human parent address or exact live ancestor Agent.
+   * @returns the request outcome without awaiting target quiescence.
    * @throws {SubagentError} `UNAUTHORIZED` when the authority does not own the
    *   live target.
    */
-  interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void {
-    this.continuations?.interrupt(targetSessionId, authority)
+  interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): SubagentInterruptOutcome {
+    return this.continuations?.interrupt(targetSessionId, authority) ?? 'not-live'
   }
 
   /**

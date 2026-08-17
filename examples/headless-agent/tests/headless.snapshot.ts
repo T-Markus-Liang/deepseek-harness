@@ -779,13 +779,13 @@ describe('headless stream-json snapshots', () => {
     expect(normalized).toBe(await readFile(streamExpected, 'utf8'))
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
-  it('delivers a continuable child result without parent polling', async () => {
+  it('reads a continuable child result without resuming the child', async () => {
     const parentReplay = join(settlementScenarioDir, 'parent.replay.jsonl')
     const parentOverride = join(settlementScenarioDir, 'parent.override.json')
     const childReplay = join(settlementScenarioDir, 'child.replay.jsonl')
     const childExpected = join(settlementScenarioDir, 'child.expected.jsonl')
     const streamExpected = join(settlementScenarioDir, 'stream-json.expected.jsonl')
-    const task = 'Start one continuable background subagent and answer from its completion notice. Do not call list_agents, send_message, job_output, or job_list.'
+    const task = 'Start one continuable background subagent, then call get_agent_result after its completion notice and answer from the recorded result. Do not call list_agents, send_message, job_output, or job_list.'
     let runCwd = ''
     const result = await runLoaderSmoke({
       label: 'continuable settlement headless stream-json snapshot',
@@ -813,7 +813,8 @@ describe('headless stream-json snapshots', () => {
 
         const parentRecords = parseJsonl(parent.content)
         const calls = parentRecords.filter(record => record.type === 'tool/call')
-        expect(calls.map(record => (record.data as JsonObject | undefined)?.name)).toEqual(['subagent'])
+        expect(calls.map(record => (record.data as JsonObject | undefined)?.name))
+          .toEqual(['subagent', 'get_agent_result'])
         const callArguments = (calls[0]?.data as JsonObject | undefined)?.arguments
         if (typeof callArguments !== 'string') throw new Error('subagent call did not persist its arguments')
         expect(JSON.parse(callArguments)).not.toHaveProperty('run_in_background')
@@ -843,7 +844,7 @@ describe('headless stream-json snapshots', () => {
     const records = parseJsonl(result.stdout)
     expect(records.at(-1)).toMatchObject({
       type: 'result',
-      output: 'PARENT_RECEIVED_CHILD_RESULT',
+      output: 'PARENT_READ_CHILD_RESULT',
     })
     const normalized = normalizeHeadlessStream(result.stdout, runCwd)
     if (refreshing) await writeFile(streamExpected, normalized)

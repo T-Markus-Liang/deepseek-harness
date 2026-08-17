@@ -2319,7 +2319,8 @@ describe('SubagentRuntime.interrupt', () => {
     await followup(ctx, parent, started.childId, message('parked C'))
     const cancelSpy = vi.spyOn(child, 'cancel')
 
-    ctx.subagents.interrupt(started.childId, { kind: 'user', parentSessionId: parent.id })
+    expect(ctx.subagents.interrupt(started.childId, { kind: 'user', parentSessionId: parent.id }))
+      .toBe('requested')
 
     expect(cancelSpy).toHaveBeenCalledTimes(1)
     expect(cancelSpy).toHaveBeenCalledWith({ kind: 'user' }, { keepInbox: true })
@@ -2422,10 +2423,12 @@ describe('SubagentRuntime.interrupt', () => {
     const grandchildCancel = vi.spyOn(grandchildAgent, 'cancel')
 
     // Deep ancestor: the top-level parent interrupts the grandchild.
-    ctx.subagents.interrupt(grandchild.childId, { kind: 'ancestor', agent: parent })
+    expect(ctx.subagents.interrupt(grandchild.childId, { kind: 'ancestor', agent: parent }))
+      .toBe('requested')
     expect(grandchildCancel).toHaveBeenCalledWith({ kind: 'parent' }, { keepInbox: true })
     // Direct ancestor: the same authority kind covers the immediate parent.
-    ctx.subagents.interrupt(started.childId, { kind: 'ancestor', agent: parent })
+    expect(ctx.subagents.interrupt(started.childId, { kind: 'ancestor', agent: parent }))
+      .toBe('requested')
     expect(childCancel).toHaveBeenCalledWith({ kind: 'parent' }, { keepInbox: true })
 
     releaseChild.resolve(undefined)
@@ -2471,10 +2474,12 @@ describe('SubagentRuntime.interrupt', () => {
     await waitNoActivation(ctx, siblingStart.childId)
   })
 
-  it('accepts absent and one-shot ids as no-ops without touching the one-shot Agent', async () => {
+  it('reports absent and one-shot ids as not live without touching the one-shot Agent', async () => {
     const { ctx, parent } = await setup([textResponse('one shot')])
-    ctx.subagents.interrupt(SessionId('missing'), { kind: 'user', parentSessionId: parent.id })
-    ctx.subagents.interrupt(SessionId('missing'), { kind: 'ancestor', agent: parent })
+    expect(ctx.subagents.interrupt(SessionId('missing'), { kind: 'user', parentSessionId: parent.id }))
+      .toBe('not-live')
+    expect(ctx.subagents.interrupt(SessionId('missing'), { kind: 'ancestor', agent: parent }))
+      .toBe('not-live')
 
     const run = await ctx.subagents.start('spawn', {
       label: 'one-shot work',
@@ -2484,19 +2489,23 @@ describe('SubagentRuntime.interrupt', () => {
     })
     const oneShot = run.localAgent!
     const cancelSpy = vi.spyOn(oneShot, 'cancel')
-    ctx.subagents.interrupt(run.id, { kind: 'user', parentSessionId: parent.id })
-    ctx.subagents.interrupt(run.id, { kind: 'ancestor', agent: parent })
+    expect(ctx.subagents.interrupt(run.id, { kind: 'user', parentSessionId: parent.id }))
+      .toBe('not-live')
+    expect(ctx.subagents.interrupt(run.id, { kind: 'ancestor', agent: parent }))
+      .toBe('not-live')
     expect(cancelSpy).not.toHaveBeenCalled()
     await run.result
     await run.dispose()
   })
 
-  it('accepts an interrupt after natural completion', async () => {
+  it('reports a naturally completed target as not live', async () => {
     const { ctx, parent } = await setup([textResponse('done')])
     const started = await ctx.subagents.startContinuable(startSpec(parent))
     await waitNoActivation(ctx, started.childId)
-    ctx.subagents.interrupt(started.childId, { kind: 'user', parentSessionId: parent.id })
-    ctx.subagents.interrupt(started.childId, { kind: 'ancestor', agent: parent })
+    expect(ctx.subagents.interrupt(started.childId, { kind: 'user', parentSessionId: parent.id }))
+      .toBe('not-live')
+    expect(ctx.subagents.interrupt(started.childId, { kind: 'ancestor', agent: parent }))
+      .toBe('not-live')
   })
 
   it('accepts an interrupt that lost the race with disposal without signalling twice', async () => {
@@ -2513,8 +2522,9 @@ describe('SubagentRuntime.interrupt', () => {
     const drained = ctx.subagents.drainContinuableDescendants([parent])
     expect(cancelSpy).toHaveBeenCalledTimes(1)
 
-    // Interrupt after the cutoff: accepted no-op, no second signal, no waiting.
-    ctx.subagents.interrupt(started.childId, { kind: 'user', parentSessionId: parent.id })
+    // Interrupt after the cutoff reports settlement, sends no second signal, and does not wait.
+    expect(ctx.subagents.interrupt(started.childId, { kind: 'user', parentSessionId: parent.id }))
+      .toBe('already-settled')
     expect(cancelSpy).toHaveBeenCalledTimes(1)
 
     hold.resolve(undefined)

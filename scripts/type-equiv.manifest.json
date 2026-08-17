@@ -1272,6 +1272,16 @@
     },
     {
       "doc": "docs/subsystems/subagent.md",
+      "symbol": "SubagentInterruptOutcome",
+      "source": "packages/subagent/subagent/src/continuation.ts"
+    },
+    {
+      "doc": "docs/subsystems/subagent.md",
+      "symbol": "SubagentConversationResult",
+      "source": "packages/subagent/subagent/src/read-result.ts"
+    },
+    {
+      "doc": "docs/subsystems/subagent.md",
       "symbol": "SubagentDescendantListEntry",
       "source": "packages/subagent/subagent/src/list-children.ts"
     },

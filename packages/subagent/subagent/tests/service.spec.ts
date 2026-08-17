@@ -134,14 +134,14 @@ describe('SubagentRuntime', () => {
     await expect(subagents.drainContinuableDescendants([])).resolves.toBeUndefined()
   })
 
-  it('treats interrupt as an accepted no-op when no manager was bound', async () => {
+  it('reports not-live when no continuation manager was bound', async () => {
     const { subagents } = await service()
     // Without a continuation manager no live Activation can exist, so there is
     // nothing to stop and nothing to authorize against.
-    expect(() => { subagents.interrupt(SessionId('child'), {
+    expect(subagents.interrupt(SessionId('child'), {
       kind: 'user',
       parentSessionId: SessionId('parent-1'),
-    }) }).not.toThrow()
+    })).toBe('not-live')
   })
 
   it('rejects continuable operations when their runtime services are absent', async () => {

@@ -141,7 +141,9 @@ Agent 收件箱是唯一的队列。每条继续执行消息都会成为一个 `
 
 对于这两种操作，调用方 signal 仅在收件箱接受之前掌管查找、物化与准入。此后管理器独立掌管该 Activation：之后的调用方取消既不会取消已接受的轮次，也不会 dispose 子 agent，并且该 seam 不对外暴露任何 steering（中途引导）操作。
 
-`SubagentRuntime.interrupt(targetSessionId, authority)` 是唯一的公开停止操作：它同步完成鉴权，对在线目标发出 `Agent.cancel(cause, { keepInbox: true })`，然后不等待完全停稳即返回。Activation、其尚未领取的待处理 inbox 工作与已发布的后代均不受影响；已被领取进入中断轮次的工作不会重新入队。被中断的 driver 进入 idle 后，一次唤醒发送会恢复被暂停的 FIFO 队列。不存在的目标——未知、一次性或已结算——以及未绑定管理器的组合是被接受的 no-op。对在线目标，错误的 parent 地址或不在其在线祖先链中的调用方会以 `UNAUTHORIZED` 拒绝；陈旧的 ancestor 对象和指向自身的 ancestor 请求会在查找目标前拒绝。
+`SubagentRuntime.readResult(parent, childId, signal?)` 为确切在线直接 parent 提供只读恢复路径，以处理未收到主动 settlement 通知的情况。存在在线 Session 时直接读取，否则使用不变更状态的持久化 inspect；该操作不会恢复 child、发送输入或修改 inbox。管理器拥有 Activation 时结果为 `active`，否则为 `inactive`，并携带最新记录的 assistant 输出与 inactive 日志中的终止原因。`inactive` 表示驻留状态，而非永久完成；之后的 `followup()` 仍可物化新的 Activation。
+
+`SubagentRuntime.interrupt(targetSessionId, authority)` 是唯一的公开停止操作：它同步完成鉴权，对在线目标发出 `Agent.cancel(cause, { keepInbox: true })`，然后不等待完全停稳即返回。Activation、其尚未领取的待处理 inbox 工作与已发布的后代均不受影响；已被领取进入中断轮次的工作不会重新入队。被中断的 driver 进入 idle 后，一次唤醒发送会恢复被暂停的 FIFO 队列。在线目标返回 `requested`，正在 dispose 的目标返回 `already-settled`，不存在的目标——未知、一次性或已结算——以及未绑定管理器的组合返回 `not-live`。对在线目标，错误的 parent 地址或不在其在线祖先链中的调用方会以 `UNAUTHORIZED` 拒绝；陈旧的 ancestor 对象和指向自身的 ancestor 请求会在查找目标前拒绝。
 
 ```ts type-equiv
 /**
@@ -152,6 +154,23 @@ Agent 收件箱是唯一的队列。每条继续执行消息都会成为一个 `
 type SubagentInterruptAuthority =
   | { readonly kind: 'user'; readonly parentSessionId: SessionId }
   | { readonly kind: 'ancestor'; readonly agent: Agent }
+```
+
+```ts type-equiv
+/** Result of an interrupt request after authority validation. */
+type SubagentInterruptOutcome = 'requested' | 'already-settled' | 'not-live'
+```
+
+```ts type-equiv
+/** Latest recorded result of one continuable child conversation. */
+interface SubagentConversationResult {
+  /** Whether the continuation manager currently owns a live Activation. */
+  readonly activity: 'active' | 'inactive'
+  /** Last non-empty assistant output recorded in the child's own log suffix. */
+  readonly output: ContentBlock[]
+  /** Latest recorded terminal reason, absent while an Activation is active. */
+  readonly stopReason?: SubagentStopReason
+}
 ```
 
 每个 Activation 都拥有自己的 `AgentHandle` 和一个 `ownedChildren: Set<SessionId>`；由于一份会话至多有一个存活 Activation，子会话 id 无需另一个运行时化身引用即可标识存活的子 agent。启动子 agent 或提交源自 parent 的工作，会在子 agent 能够运行之前将其注册到受继续执行管理的父级集合中；只要该集合非空，该父级就无法 settle。顶层或其他非继续执行的 Agent 没有 Activation，处于 waiting 图之外。只有当子 Agent 已完全停稳、该子 agent 的每个子级都已 dispose、best-effort 的最终会话 flush 结算完毕，且子 agent 的 `AgentHandle` 完成 dispose 之后，才会释放子 agent。
@@ -513,21 +532,32 @@ async startContinuable(spec: ContinuableStartSpec): Promise<ContinuableStart>
 async followup( parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions, ): Promise<MessageId>
 
 /**
+ * Read one direct continuable child's latest recorded assistant result without
+ * resuming it, sending a message, or changing its inbox.
+ * @param parent - exact live direct parent authorizing this read.
+ * @param childId - durable child session id.
+ * @param signal - cancellation for a cold persistence inspection.
+ * @returns the live-preferred result and current Activation activity.
+ */
+async readResult( parent: Agent, childId: SessionId, signal?: AbortSignal, ): Promise<SubagentConversationResult>
+
+/**
  * Interrupt one live continuable child's current turn under a human parent
  * address or an exact live ancestor Agent. Fire-and-return: the cancel
  * signal is issued before this returns, but the target may keep running
  * until it observes the signal. Unclaimed pending inbox work, the Activation,
  * and published descendants are preserved; claimed work is not requeued.
  * Once the interrupted driver is idle, a waking send resumes the parked FIFO
- * queue. An absent target — including a one-shot or unknown id —
- * is an accepted no-op, as is a manager-less composition, which cannot own a
- * live Activation.
+ * queue. An absent target — including a one-shot or unknown id — returns
+ * `not-live`; a disposing target returns `already-settled`; a manager-less
+ * composition also returns `not-live` because it cannot own a live Activation.
  * @param targetSessionId - the durable child session id to interrupt.
  * @param authority - the human parent address or exact live ancestor Agent.
+ * @returns the request outcome without awaiting target quiescence.
  * @throws {SubagentError} `UNAUTHORIZED` when the authority does not own the
  *   live target.
  */
-interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void
+interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): SubagentInterruptOutcome
 
 /**
  * Deliver selected content from one live continuable child to its durable
@@ -648,7 +678,7 @@ async start(name: string, request: SubagentStartRequest): Promise<SubagentRun>
 
 Types: [Agent](core.md) · [ContentBlock](llm-streaming.md) · [MessageId](llm-streaming.md) · [SessionId](core.md)
 
-Source: [`packages/subagent/subagent/src/index.ts:171`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:175`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagent-events"></a>
 
@@ -674,7 +704,7 @@ A published child settled. Scope-filtered dispatch uses the same delegating pare
 
 Types: [Scoped](scope.md)
 
-Source: [`packages/subagent/subagent/src/index.ts:166`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:170`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagentprovider-added--emit"></a>
 
@@ -691,7 +721,7 @@ A provider became resolvable in the registry.
 'subagent/provider-added'(provider: SubagentProvider): void
 ```
 
-Source: [`packages/subagent/subagent/src/index.ts:140`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:144`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagentprovider-removed--emit"></a>
 
@@ -708,7 +738,7 @@ A provider left the registry. Accepted runs remain holder-owned.
 'subagent/provider-removed'(name: string): void
 ```
 
-Source: [`packages/subagent/subagent/src/index.ts:146`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:150`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagentstart--emit"></a>
 
@@ -732,5 +762,5 @@ A provider established a published child. For in-process providers, `ctx.agents.
 
 Types: [Scoped](scope.md)
 
-Source: [`packages/subagent/subagent/src/index.ts:157`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:161`](../../packages/subagent/subagent/src/index.ts)
 <!-- END GENERATED cordis-surface -->

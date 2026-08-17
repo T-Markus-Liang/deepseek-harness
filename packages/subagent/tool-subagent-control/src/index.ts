@@ -1,7 +1,7 @@
 /**
- * The globally named `send_message` and `interrupt_agent` tools: thin
- * model-facing adapters over `ctx.subagents.followup()` and
- * `ctx.subagents.interrupt()`. They perform no lifecycle routing of their own —
+ * The globally named `send_message`, `get_agent_result`, and `interrupt_agent`
+ * tools: thin model-facing adapters over `ctx.subagents.followup()`,
+ * `ctx.subagents.readResult()`, and `ctx.subagents.interrupt()`. They perform no lifecycle routing of their own —
  * residency, cold resume, and interrupt authorization belong to the subagent
  * service — and they live apart from the provider-bound
  * `@deepseek-ai/dsh-tool-subagent` instances so multiple delegation tools share
@@ -12,14 +12,15 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { SessionId, snapshotJsonValue } from '@deepseek-ai/dsh-session'
+import type { JsonValue } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-subagent'
 
 export const name = 'tool-subagent-control'
 export const inject = ['tools', 'subagents']
 
 /**
- * Register the `send_message` and `interrupt_agent` tools.
+ * Register the `send_message`, `get_agent_result`, and `interrupt_agent` tools.
  * @param ctx - context carrying the tool registry and subagent service.
  */
 export function apply(ctx: Context): void {
@@ -77,14 +78,65 @@ export function apply(ctx: Context): void {
   }))
 
   ctx.tools.register(defineTool({
+    name: 'get_agent_result',
+    description:
+      'Read the latest recorded result of one of your direct continuable background subagents without '
+      + 'resuming it, sending a message, or starting a model turn. Use this when a completion notice may '
+      + 'have been missed. Active means the agent still has a live activation; inactive means it is stored '
+      + 'between turns and can still be resumed later.',
+    parameters: {
+      subagent_id: {
+        type: 'string',
+        required: true,
+        description: 'The durable id of your direct continuable subagent.',
+      },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          activity: { type: 'string', enum: ['active', 'inactive'], required: true },
+          output: { type: 'array', required: true },
+          stopReason: {
+            type: 'string',
+            enum: ['completed', 'aborted', 'error', 'max-tokens', 'refusal'],
+          },
+        },
+      },
+      render: (_args, value) => [{
+        type: 'text',
+        text: JSON.stringify(value),
+      }],
+    },
+    async execute(args, exec) {
+      const parent = exec.agent
+      if (!parent) {
+        throw new Error('get_agent_result requires a calling agent (exec.agent was undefined)')
+      }
+      const result = await ctx.subagents.readResult(parent, SessionId(args.subagent_id), exec.signal)
+      const output = result.output.map((block) => {
+        const value = snapshotJsonValue(block) as JsonValue | undefined
+        if (value === undefined) throw new Error('subagent result contained a non-JSON content block')
+        return value
+      })
+      return {
+        activity: result.activity,
+        output,
+        ...result.stopReason !== undefined ? { stopReason: result.stopReason } : {},
+      }
+    },
+  }))
+
+  ctx.tools.register(defineTool({
     name: 'interrupt_agent',
     description:
       'Request cancellation of a background agent\'s current turn by its agent id. The target may be your '
       + 'direct child or a deeper agent created under you. Only the current turn stops: messages already '
       + 'queued for the agent stay parked until a later send_message, agents it started keep running, and '
       + 'the agent itself stays available for follow-ups. This call returns as soon as the stop request is '
-      + 'accepted, so the target may keep running briefly; interrupting an agent that already finished is '
-      + 'an accepted no-op.',
+      + 'accepted, so the target may keep running briefly. The result distinguishes a requested interrupt '
+      + 'from a target that is already settling or has no live continuable activation.',
     parameters: {
       agent_id: {
         type: 'string',
@@ -97,12 +149,20 @@ export function apply(ctx: Context): void {
         type: 'object',
         additionalProperties: false,
         properties: {
-          accepted: { type: 'boolean', required: true },
+          outcome: {
+            type: 'string',
+            enum: ['requested', 'already-settled', 'not-live'],
+            required: true,
+          },
         },
       },
-      render: (args, _value) => [{
+      render: (args, value) => [{
         type: 'text',
-        text: `interrupt requested for agent ${args.agent_id}`,
+        text: value.outcome === 'requested'
+          ? `interrupt requested for agent ${args.agent_id}`
+          : value.outcome === 'already-settled'
+            ? `agent ${args.agent_id} was already settling; no additional interrupt was sent`
+            : `agent ${args.agent_id} has no live continuable activation; no interrupt was sent`,
       }],
     },
     execute(args, exec) {
@@ -113,8 +173,8 @@ export function apply(ctx: Context): void {
       }
       // The service authorizes the exact live caller against the target's
       // recorded lineage; the tool adds no authority of its own.
-      ctx.subagents.interrupt(SessionId(args.agent_id), { kind: 'ancestor', agent: caller })
-      return Promise.resolve({ accepted: true })
+      const outcome = ctx.subagents.interrupt(SessionId(args.agent_id), { kind: 'ancestor', agent: caller })
+      return Promise.resolve({ outcome })
     },
   }))
 }

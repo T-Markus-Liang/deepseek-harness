@@ -141,7 +141,9 @@ Follow-up authority comes from an exact live Agent tool context. The authenticat
 
 For both operations the caller signal owns lookup, materialization, and admission only until inbox acceptance. Afterwards the manager owns the Activation independently: later caller cancellation neither cancels the accepted turn nor disposes the child, and the seam exposes no steering operation.
 
-`SubagentRuntime.interrupt(targetSessionId, authority)` is the one public stop: it authorizes synchronously, issues `Agent.cancel(cause, { keepInbox: true })` on the live target, and returns without awaiting quiescence. The Activation, its unclaimed pending inbox work, and published descendants are untouched; work already claimed into the interrupted turn is not requeued. Once the interrupted driver is idle, a waking send resumes the parked FIFO queue. An absent target — unknown, one-shot, or already settled — and a manager-less composition are accepted no-ops. For a live target, a mismatched parent address or caller outside its live ancestry rejects with `UNAUTHORIZED`; stale ancestor objects and self-targeting ancestor requests reject before target lookup.
+`SubagentRuntime.readResult(parent, childId, signal?)` gives the exact live direct parent a read-only recovery path when an unsolicited settlement notice was missed. It reads the live Session when present, otherwise uses non-mutating persistence inspection; it never resumes the child, sends input, or changes the inbox. The result reports `active` while the manager owns an Activation and `inactive` otherwise, plus the latest recorded assistant output and the inactive log's terminal reason. `inactive` is residency, not permanent completion: a later `followup()` may materialize another Activation.
+
+`SubagentRuntime.interrupt(targetSessionId, authority)` is the one public stop: it authorizes synchronously, issues `Agent.cancel(cause, { keepInbox: true })` on the live target, and returns without awaiting quiescence. The Activation, its unclaimed pending inbox work, and published descendants are untouched; work already claimed into the interrupted turn is not requeued. Once the interrupted driver is idle, a waking send resumes the parked FIFO queue. A live target returns `requested`, a disposing target returns `already-settled`, and an absent target — unknown, one-shot, or already settled — or manager-less composition returns `not-live`. For a live target, a mismatched parent address or caller outside its live ancestry rejects with `UNAUTHORIZED`; stale ancestor objects and self-targeting ancestor requests reject before target lookup.
 
 ```ts type-equiv
 /**
@@ -152,6 +154,23 @@ For both operations the caller signal owns lookup, materialization, and admissio
 type SubagentInterruptAuthority =
   | { readonly kind: 'user'; readonly parentSessionId: SessionId }
   | { readonly kind: 'ancestor'; readonly agent: Agent }
+```
+
+```ts type-equiv
+/** Result of an interrupt request after authority validation. */
+type SubagentInterruptOutcome = 'requested' | 'already-settled' | 'not-live'
+```
+
+```ts type-equiv
+/** Latest recorded result of one continuable child conversation. */
+interface SubagentConversationResult {
+  /** Whether the continuation manager currently owns a live Activation. */
+  readonly activity: 'active' | 'inactive'
+  /** Last non-empty assistant output recorded in the child's own log suffix. */
+  readonly output: ContentBlock[]
+  /** Latest recorded terminal reason, absent while an Activation is active. */
+  readonly stopReason?: SubagentStopReason
+}
 ```
 
 Every Activation owns its `AgentHandle` and an `ownedChildren: Set<SessionId>`; because one Session has at most one live Activation, the child Session id identifies the live child without another runtime-incarnation reference. Starting a child or submitting parent-originated work registers the child in a continuation-managed parent's set before the child can run, and that parent cannot settle while the set is non-empty. A top-level or other non-continuation Agent has no Activation and stays outside the waiting graph. Child release happens only after the child Agent is quiescent, every child of that child is disposed, the best-effort final session flush settles, and the child's `AgentHandle` completes disposal.
@@ -511,21 +530,32 @@ async startContinuable(spec: ContinuableStartSpec): Promise<ContinuableStart>
 async followup( parent: Agent, childId: SessionId, content: ContentBlock[], options: SubagentFollowupOptions, ): Promise<MessageId>
 
 /**
+ * Read one direct continuable child's latest recorded assistant result without
+ * resuming it, sending a message, or changing its inbox.
+ * @param parent - exact live direct parent authorizing this read.
+ * @param childId - durable child session id.
+ * @param signal - cancellation for a cold persistence inspection.
+ * @returns the live-preferred result and current Activation activity.
+ */
+async readResult( parent: Agent, childId: SessionId, signal?: AbortSignal, ): Promise<SubagentConversationResult>
+
+/**
  * Interrupt one live continuable child's current turn under a human parent
  * address or an exact live ancestor Agent. Fire-and-return: the cancel
  * signal is issued before this returns, but the target may keep running
  * until it observes the signal. Unclaimed pending inbox work, the Activation,
  * and published descendants are preserved; claimed work is not requeued.
  * Once the interrupted driver is idle, a waking send resumes the parked FIFO
- * queue. An absent target — including a one-shot or unknown id —
- * is an accepted no-op, as is a manager-less composition, which cannot own a
- * live Activation.
+ * queue. An absent target — including a one-shot or unknown id — returns
+ * `not-live`; a disposing target returns `already-settled`; a manager-less
+ * composition also returns `not-live` because it cannot own a live Activation.
  * @param targetSessionId - the durable child session id to interrupt.
  * @param authority - the human parent address or exact live ancestor Agent.
+ * @returns the request outcome without awaiting target quiescence.
  * @throws {SubagentError} `UNAUTHORIZED` when the authority does not own the
  *   live target.
  */
-interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): void
+interrupt(targetSessionId: SessionId, authority: SubagentInterruptAuthority): SubagentInterruptOutcome
 
 /**
  * Deliver selected content from one live continuable child to its durable
@@ -646,7 +676,7 @@ async start(name: string, request: SubagentStartRequest): Promise<SubagentRun>
 
 Types: [Agent](core.md) · [ContentBlock](llm-streaming.md) · [MessageId](llm-streaming.md) · [SessionId](core.md)
 
-Source: [`packages/subagent/subagent/src/index.ts:171`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:175`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagent-events"></a>
 
@@ -672,7 +702,7 @@ A published child settled. Scope-filtered dispatch uses the same delegating pare
 
 Types: [Scoped](scope.md)
 
-Source: [`packages/subagent/subagent/src/index.ts:166`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:170`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagentprovider-added--emit"></a>
 
@@ -689,7 +719,7 @@ A provider became resolvable in the registry.
 'subagent/provider-added'(provider: SubagentProvider): void
 ```
 
-Source: [`packages/subagent/subagent/src/index.ts:140`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:144`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagentprovider-removed--emit"></a>
 
@@ -706,7 +736,7 @@ A provider left the registry. Accepted runs remain holder-owned.
 'subagent/provider-removed'(name: string): void
 ```
 
-Source: [`packages/subagent/subagent/src/index.ts:146`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:150`](../../packages/subagent/subagent/src/index.ts)
 
 <a id="subagentstart--emit"></a>
 
@@ -730,5 +760,5 @@ A provider established a published child. For in-process providers, `ctx.agents.
 
 Types: [Scoped](scope.md)
 
-Source: [`packages/subagent/subagent/src/index.ts:157`](../../packages/subagent/subagent/src/index.ts)
+Source: [`packages/subagent/subagent/src/index.ts:161`](../../packages/subagent/subagent/src/index.ts)
 <!-- END GENERATED cordis-surface -->
