@@ -21,6 +21,11 @@ const HOOKS_DIRECTORY = 'dsh-hooks'
 const OWNERSHIP_MARKER = '.dsh-lefthook-owned'
 const OWNERSHIP_MARKER_VERSION = 1
 const OWNERSHIP_MARKER_OWNER = 'deepseek-harness worktree-local lefthook hooks'
+// `node` may be absent from the invoking shell's PATH (e.g. a minimal sandbox
+// shell). Lefthook's generated hook scripts run `env node` shims, so each
+// generated hook prepends a well-known location. Re-applied on every install.
+const GENERATED_HOOK_NAMES = ['pre-commit', 'pre-merge-commit', 'pre-push']
+const GENERATED_HOOK_PATH_BOOTSTRAP = 'export PATH="/usr/local/bin:$PATH"'
 const INSTALL_LOCK = 'dsh-lefthook-install.lock'
 const INSTALL_LOCK_TIMEOUT_MS = 30_000
 const INSTALL_LOCK_INITIALIZATION_TIMEOUT_MS = 1_000
@@ -536,6 +541,19 @@ function updateOwnershipMarker(markerPath, hooksPath) {
   writeFileSync(markerPath, ownershipMarkerContent(hooksPath), { mode: 0o600 })
 }
 
+function hardenGeneratedHooks(hooksPath) {
+  for (const name of GENERATED_HOOK_NAMES) {
+    const hookPath = join(hooksPath, name)
+    if (!existsSync(hookPath)) continue
+    const content = readFileSync(hookPath, 'utf8')
+    if (content.includes(GENERATED_HOOK_PATH_BOOTSTRAP)) continue
+    writeFileSync(hookPath, content.replace(
+      '#!/bin/sh\n',
+      `#!/bin/sh\n${GENERATED_HOOK_PATH_BOOTSTRAP}\n`,
+    ), { mode: 0o755 })
+  }
+}
+
 function environmentWithoutCommandGitConfig() {
   const env = { ...process.env }
   for (const key of Object.keys(env)) {
@@ -791,6 +809,7 @@ async function main() {
         throw new Error('new worktree-local core.hooksPath did not become the effective direct worktree value')
       }
       runLefthook(root, lefthook)
+      hardenGeneratedHooks(hooksPath)
       updateOwnershipMarker(ownedHooksDirectory.markerPath, hooksPath)
     } catch (error) {
       const rollbackErrors = []
