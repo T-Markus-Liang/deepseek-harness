@@ -28,19 +28,30 @@
    riding the title's top-right. */
 .headline {
   display: grid;
-  grid-template-columns: 34px auto auto;
-  column-gap: 10px;
+  grid-template-columns: 42px auto auto;
+  column-gap: 14px;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  line-height: 32px;
-  font-weight: 500;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 560;
+  letter-spacing: -0.03em;
   color: var(--dsw-alias-label-primary);
 }
 
 .headlineText {
   grid-row: 1;
   grid-column: 2;
+  background: linear-gradient(
+    92deg,
+    var(--dsw-alias-label-primary) 0%,
+    var(--dsw-specific-black-whale-accent) 52%,
+    var(--dsw-alias-label-primary) 100%
+  );
+  background-clip: text;
+  color: transparent;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .previewBadge {
@@ -50,9 +61,10 @@
   margin-top: 2px;
   margin-left: -3px;
   padding: 1px 7px 0;
-  border: 1px solid var(--dsw-alias-interactive-bg-hover);
+  border: 1px solid var(--dsw-specific-black-whale-panel-border);
   border-radius: 24px;
-  background: var(--dsw-alias-state-business-tertiary);
+  background: var(--dsw-specific-black-whale-accent-soft);
+  box-shadow: 0 0 20px var(--dsw-specific-black-whale-glow);
   color: var(--dsw-alias-label-primary-bluish);
   font-family: var(--ds-font-family-code);
   font-size: 12px;
@@ -72,7 +84,9 @@
 
 /* Keep the hero mark in the same primary ink as its headline. */
 .fish {
-  color: var(--dsw-alias-label-primary);
+  color: var(--dsw-specific-black-whale-accent);
+  filter: drop-shadow(0 0 18px var(--dsw-specific-black-whale-glow));
+  transform: scale(1.12);
   transform-origin: 50% 60%;
 }
 
@@ -132,7 +146,7 @@
   max-width: min(100%, 360px);
   min-height: 28px;
   padding: 0 8px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 16px;
   background: transparent;
   color: var(--dsw-alias-label-primary);
@@ -144,7 +158,9 @@
 
 .workspace:not(:disabled):hover,
 .workspace[aria-expanded='true'] {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: var(--dsw-specific-black-whale-accent-soft);
+  border-color: var(--dsw-specific-black-whale-panel-border);
+  box-shadow: 0 0 18px var(--dsw-specific-black-whale-glow);
 }
 
 /* Locked form (bound guidance state): a static echo — no hover feedback, no

@@ -19,8 +19,17 @@
 .bubble {
   /* 525px cap inside the 736 column; percentage keeps narrow windows sane. */
   max-width: 100%;
-  background: var(--dsw-specific-bubble);
+  border: 1px solid var(--dsw-specific-black-whale-panel-border);
   border-radius: 22px;
+  background: var(--dsw-specific-bubble);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--dsw-static-deepseek-600) 72%, transparent),
+    color-mix(in srgb, var(--dsw-specific-bubble) 90%, transparent)
+  );
+  box-shadow: 0 14px 34px var(--dsw-specific-black-whale-glow);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
   /* 44px single-line bubble: 24 line + 10 vertical padding each side. */
   padding: 10px 16px;
   font-size: 16px;

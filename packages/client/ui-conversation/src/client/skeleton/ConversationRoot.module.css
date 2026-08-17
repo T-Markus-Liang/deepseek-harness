@@ -30,9 +30,14 @@
 
 .header {
   position: relative;
+  z-index: 2;
   flex: none;
   padding: 12px 28px 0 20px;
   border-bottom: 1px solid transparent;
+  background: var(--dsw-alias-bg-base);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 74%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 
 .header::after {
@@ -43,7 +48,13 @@
   left: 0;
   z-index: 0;
   height: 1px;
-  background: var(--dsw-alias-border-l2);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--dsw-specific-black-whale-accent-soft),
+    var(--dsw-alias-border-l2),
+    transparent
+  );
   pointer-events: none;
 }
 
@@ -177,7 +188,12 @@
 }
 
 .tabActive::after {
-  background: var(--dsw-alias-state-business-primary);
+  background: linear-gradient(
+    90deg,
+    var(--dsw-specific-black-whale-accent),
+    var(--dsw-static-deepseek-300)
+  );
+  box-shadow: 0 0 14px var(--dsw-specific-black-whale-glow);
 }
 
 .viewArea {

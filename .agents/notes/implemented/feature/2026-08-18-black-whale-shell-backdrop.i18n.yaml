@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-18-black-whale-shell-backdrop.md
-2026-08-18-black-whale-shell-backdrop.md: 2925ff40b4f1bdc98a8f5c5ce7e0be526e1350ec
-2026-08-18-black-whale-shell-backdrop.zh.md: 1fda15404cad48827ddce4021dbb097605700ac2
+2026-08-18-black-whale-shell-backdrop.md: 7b3a8575dd9197ef11d28830c0a14f288fd324f3
+2026-08-18-black-whale-shell-backdrop.zh.md: 7e8775c74ad7d184f7dc47bea05669785d7503c5

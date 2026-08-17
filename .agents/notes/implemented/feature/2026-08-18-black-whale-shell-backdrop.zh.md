@@ -10,9 +10,9 @@ Web 壳层在中性语义表面之外没有即时的视觉身份。面向用户�
 
 ## Decision
 
-背景归 AppFrame 壳层所有。AppFrame 在 sidebar、conversation 与 details 三列之下渲染一个 aria-hidden、pointer-inert 的图层。该图层使用 Web 自有 SVG `apps/web/public/whale.svg`：图形来自精确的 FishLogo path，但作为静态资产打包，因此 `ui-layout` 不需要导入 `ui-primitives`。资产把鲸鱼渲染为黑色主体与蓝色边缘光；`ui-theme` 拥有浅色和深色的 `--dsw-specific-black-whale-*` token，`AppFrame.module.css` 拥有渐层、声呐环、粒子场和半透明列表面。
+背景归 AppFrame 壳层所有，品牌强调色语言归共享主题 token 所有。AppFrame 在 sidebar、conversation 与 details 三列之下渲染一个 aria-hidden、pointer-inert 的图层。该图层使用 Web 自有 SVG `apps/web/public/whale.svg`：图形来自精确的 FishLogo path，但作为静态资产打包，因此 `ui-layout` 不需要导入 `ui-primitives`。资产把鲸鱼渲染为更大的蓝黑主体，并加入高饱和蓝色边缘光、光晕与流动光线；`ui-theme` 拥有浅色和深色的 `--dsw-specific-black-whale-*` 背景与强调 token，`AppFrame.module.css` 拥有深蓝黑渐层、流动光带、声呐环、粒子场、暗角和半透明列表面。
 
-可读性优先于氛围。conversation root 保持透明，让壳层背景能出现在留白与空态区域；输入框仍保留接近实体的 token 表面并叠加 backdrop blur。sidebar、center 与 details 三列在 `color-mix()` 玻璃处理之前都先声明实体 token 背景作为回退。装饰层没有指针目标，位于拖拽手柄和 shell overlay 之下，并且在 `prefers-reduced-motion: reduce` 下停止声呐与粒子动画。
+可读性仍优先于氛围，但氛围必须在首次绘制时清晰可见。conversation root 保持透明，让壳层背景能出现在留白与空态区域；侧栏的分隔线、图标悬停和新建会话主按钮使用同一组 token 强调色；空态 Hero 使用渐变标题、发光鲸鱼和玻璃 chip；会话头部与活动 Tab 带有克制的蓝色光轨；输入卡片使用渐变描边和外发光；用户气泡使用蓝黑玻璃处理。sidebar、center 与 details 三列在 `color-mix()` 玻璃处理之前都先声明实体 token 背景作为回退。装饰层没有指针目标，位于拖拽手柄和 shell overlay 之下，并且在 `prefers-reduced-motion: reduce` 下停止流动光带、声呐与粒子动画。
 
 ## Alternatives considered
 
@@ -26,6 +26,6 @@ Web 壳层在中性语义表面之外没有即时的视觉身份。面向用户�
 
 ## Consequences
 
-首次绘制现在在两种调色板中都有明确的 DeepSeek 黑鲸身份，深色模式效果更强。本次不改变任何 slot 契约、session event、store、模型可见输出或业务行为。不支持 `color-mix()` 或 `backdrop-filter` 的旧浏览器会保留实体 token 背景。
+首次绘制现在在两种调色板中都有显著的 DeepSeek 黑鲸身份，深色模式呈现为深蓝黑壁画，而不是淡淡的水印；侧栏、Hero、头部、输入卡片和用户气泡也共享同一套视觉系统。本次不改变任何 slot 契约、session event、store、模型可见输出或业务行为。不支持 `color-mix()` 或 `backdrop-filter` 的旧浏览器会保留实体 token 背景。
 
 `pnpm run test:gui` 通过 273 个文件、3,786 个测试。`DSH_SNAPSHOT=replay pnpm vitest run --config vitest.web.config.ts apps/web/tests/shipped-composition.e2e.ts` 通过 2 个组合测试。`pnpm run build` 完成，并已验证本地 Web 服务提供新的哈希前端资产与 `/whale.svg`。

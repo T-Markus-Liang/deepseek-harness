@@ -66,11 +66,24 @@
   /* Input stroke: black/0.10 light, white/0.06 dark (figma darkmode note says
      the input border is one notch weaker than buttons) — exactly the
      l2-darkmode-thin pair. Fill: the input surface token (elevated in dark). */
-  border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
+  border: 1px solid var(--dsw-specific-black-whale-panel-border);
   border-radius: 22px;
   background: var(--dsw-specific-input-major);
   background: color-mix(in srgb, var(--dsw-specific-input-major) 92%, transparent);
-  box-shadow: var(--dsw-shadow-lv2);
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--dsw-specific-input-major) 94%, transparent),
+      color-mix(in srgb, var(--dsw-specific-input-major) 88%, transparent)
+    ) padding-box,
+    linear-gradient(
+      135deg,
+      var(--dsw-specific-black-whale-accent-soft),
+      transparent 42%,
+      var(--dsw-specific-black-whale-accent)
+    ) border-box;
+  box-shadow:
+    var(--dsw-shadow-lv2),
+    0 0 36px var(--dsw-specific-black-whale-glow);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   font-size: 16px;

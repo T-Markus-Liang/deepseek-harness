@@ -337,25 +337,34 @@ body[data-ds-dark-theme] {
   --dsw-specific-tip: var(--dsw-static-neutral-bluish-800);
 }
 
-/* Black Whale shell backdrop tokens, consumed only by ui-layout's AppFrame
-   shell. The semantic surfaces stay unchanged; these values control the
-   frame gradient, sonar rings, particle dust, and whale opacity beneath
-   them. Dark mode carries the stronger black-whale treatment; light mode
-   keeps the same structure at daylight contrast. */
+/* Black Whale visual-system tokens. The backdrop values are consumed by
+   ui-layout's AppFrame shell; the accent values let sidebar, conversation,
+   composer, and bubble surfaces share the same deep-blue/black treatment
+   without hardcoding palette values in feature CSS. */
 body {
-  --dsw-specific-black-whale-bg-top: rgb(244, 247, 251);
-  --dsw-specific-black-whale-bg-bottom: rgb(230, 238, 247);
-  --dsw-specific-black-whale-glow: rgba(65, 118, 230, 0.1);
-  --dsw-specific-black-whale-sonar: rgba(65, 118, 230, 0.16);
-  --dsw-specific-black-whale-dust: rgba(65, 118, 230, 0.18);
-  --dsw-specific-black-whale-whale-opacity: 0.1;
+  --dsw-specific-black-whale-bg-top: rgb(238, 244, 251);
+  --dsw-specific-black-whale-bg-bottom: rgb(220, 232, 246);
+  --dsw-specific-black-whale-glow: rgba(65, 118, 230, 0.16);
+  --dsw-specific-black-whale-sonar: rgba(65, 118, 230, 0.22);
+  --dsw-specific-black-whale-dust: rgba(65, 118, 230, 0.24);
+  --dsw-specific-black-whale-current: rgba(65, 118, 230, 0.14);
+  --dsw-specific-black-whale-vignette: rgba(255, 255, 255, 0.34);
+  --dsw-specific-black-whale-whale-opacity: 0.22;
+  --dsw-specific-black-whale-accent: rgb(37, 99, 235);
+  --dsw-specific-black-whale-accent-soft: rgba(37, 99, 235, 0.18);
+  --dsw-specific-black-whale-panel-border: rgba(37, 99, 235, 0.18);
 }
 
 body[data-ds-dark-theme] {
-  --dsw-specific-black-whale-bg-top: rgb(13, 17, 27);
-  --dsw-specific-black-whale-bg-bottom: rgb(4, 6, 10);
-  --dsw-specific-black-whale-glow: rgba(103, 158, 254, 0.12);
-  --dsw-specific-black-whale-sonar: rgba(103, 158, 254, 0.16);
-  --dsw-specific-black-whale-dust: rgba(147, 197, 253, 0.18);
-  --dsw-specific-black-whale-whale-opacity: 0.42;
+  --dsw-specific-black-whale-bg-top: rgb(6, 10, 20);
+  --dsw-specific-black-whale-bg-bottom: rgb(1, 2, 6);
+  --dsw-specific-black-whale-glow: rgba(77, 147, 248, 0.24);
+  --dsw-specific-black-whale-sonar: rgba(96, 165, 250, 0.3);
+  --dsw-specific-black-whale-dust: rgba(147, 197, 253, 0.32);
+  --dsw-specific-black-whale-current: rgba(59, 130, 246, 0.32);
+  --dsw-specific-black-whale-vignette: rgba(0, 0, 0, 0.58);
+  --dsw-specific-black-whale-whale-opacity: 0.84;
+  --dsw-specific-black-whale-accent: rgb(96, 165, 250);
+  --dsw-specific-black-whale-accent-soft: rgba(96, 165, 250, 0.28);
+  --dsw-specific-black-whale-panel-border: rgba(147, 197, 253, 0.24);
 }

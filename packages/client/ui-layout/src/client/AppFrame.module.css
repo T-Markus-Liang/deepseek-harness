@@ -33,7 +33,7 @@
   min-width: 0;
   overflow: hidden;
   background: var(--dsw-specific-sidebar-fill);
-  background: color-mix(in srgb, var(--dsw-specific-sidebar-fill) 88%, transparent);
+  background: color-mix(in srgb, var(--dsw-specific-sidebar-fill) 80%, transparent);
   border-right: 1px solid var(--dsw-alias-border-l1);
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
@@ -47,7 +47,7 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--dsw-alias-bg-base);
-  background: color-mix(in srgb, var(--dsw-alias-bg-base) 76%, transparent);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 64%, transparent);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
 }
@@ -58,7 +58,7 @@
   min-width: 0;
   overflow: hidden;
   background: var(--dsw-alias-bg-base);
-  background: color-mix(in srgb, var(--dsw-alias-bg-base) 88%, transparent);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 82%, transparent);
   border-left: 1px solid var(--dsw-alias-border-l2);
   backdrop-filter: blur(18px) saturate(135%);
   -webkit-backdrop-filter: blur(18px) saturate(135%);
@@ -153,18 +153,33 @@
 
 .brandGlow {
   position: absolute;
-  inset: -18%;
+  inset: -24%;
   background:
-    radial-gradient(ellipse at 74% 28%, var(--dsw-specific-black-whale-glow) 0, transparent 46%),
-    radial-gradient(ellipse at 18% 78%, var(--dsw-specific-black-whale-glow) 0, transparent 40%);
+    radial-gradient(ellipse at 72% 30%, var(--dsw-specific-black-whale-glow) 0, transparent 52%),
+    radial-gradient(ellipse at 18% 78%, var(--dsw-specific-black-whale-glow) 0, transparent 44%);
+  mix-blend-mode: screen;
+}
+
+.brandCurrent {
+  position: absolute;
+  inset: -18% -22%;
+  background:
+    linear-gradient(115deg, transparent 30%, var(--dsw-specific-black-whale-current) 44%, transparent 58%),
+    linear-gradient(145deg, transparent 48%, var(--dsw-specific-black-whale-current) 60%, transparent 72%);
+  background-size: 160% 160%;
+  filter: blur(14px);
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  transform: rotate(-8deg);
+  animation: blackWhaleCurrent 18s var(--ds-ease-in-out) infinite alternate;
 }
 
 .brandRings {
   position: absolute;
-  top: 12%;
-  right: max(-14vw, -160px);
-  width: 72vmin;
-  height: 72vmin;
+  top: 8%;
+  right: max(-18vw, -190px);
+  width: 86vmin;
+  height: 86vmin;
 }
 
 .sonarRing {
@@ -172,7 +187,7 @@
   inset: 0;
   border: 1px solid var(--dsw-specific-black-whale-sonar);
   border-radius: 50%;
-  box-shadow: 0 0 32px var(--dsw-specific-black-whale-glow);
+  box-shadow: 0 0 44px var(--dsw-specific-black-whale-glow);
   opacity: 0;
   animation: blackWhaleSonar 9s var(--ds-ease-in-out) infinite;
 }
@@ -189,13 +204,13 @@
 
 .brandWhale {
   position: absolute;
-  top: 48%;
+  top: 50%;
   left: 50%;
-  width: min(68vw, 920px);
+  width: min(92vw, 1280px);
   max-width: none;
-  transform: translate(-38%, -50%) rotate(-4deg);
+  transform: translate(-34%, -50%) rotate(-5deg);
   opacity: var(--dsw-specific-black-whale-whale-opacity);
-  filter: drop-shadow(0 0 48px var(--dsw-specific-black-whale-glow));
+  filter: drop-shadow(0 0 64px var(--dsw-specific-black-whale-glow));
   user-select: none;
 }
 
@@ -208,8 +223,31 @@
     radial-gradient(circle at 42% 84%, var(--dsw-specific-black-whale-dust) 0 1px, transparent 1.7px);
   background-position: 0 0, 48px 72px, 120px 32px;
   background-size: 180px 180px, 240px 240px, 320px 320px;
-  opacity: 0.72;
+  opacity: 0.9;
   animation: blackWhaleDrift 28s linear infinite;
+}
+
+.brandVignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 52% 45%,
+    transparent 0,
+    transparent 48%,
+    var(--dsw-specific-black-whale-vignette) 100%
+  );
+}
+
+@keyframes blackWhaleCurrent {
+  0% {
+    background-position: 0% 42%, 100% 58%;
+    transform: rotate(-8deg) translate3d(-2%, 0, 0);
+  }
+
+  100% {
+    background-position: 100% 48%, 0% 52%;
+    transform: rotate(-8deg) translate3d(2%, 1%, 0);
+  }
 }
 
 @keyframes blackWhaleSonar {
@@ -219,7 +257,7 @@
   }
 
   42% {
-    opacity: 0.48;
+    opacity: 0.68;
   }
 
   100% {
@@ -235,12 +273,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .brandCurrent,
   .brandDust,
   .sonarRing {
     animation: none;
   }
 
   .sonarRing {
-    opacity: 0.08;
+    opacity: 0.14;
   }
 }
