@@ -601,6 +601,11 @@
       "source": "packages/session-query/session-query/src/types.ts"
     },
     {
+      "doc": "docs/subsystems/session-stats.md",
+      "symbol": "SessionStatsProjection",
+      "source": "packages/session/session-stats/src/types.ts"
+    },
+    {
       "doc": "docs/subsystems/session-title.md",
       "symbol": "SessionTitleProviderId",
       "source": "packages/session/session-title/src/index.ts"
