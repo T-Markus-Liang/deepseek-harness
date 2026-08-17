@@ -68,7 +68,11 @@ export async function serveStatic(
   }
   const serveIndex = async (): Promise<void> => {
     const body = await renderIndex()
-    res.writeHead(200, { 'content-type': MIME['.html'] })
+    // The SPA shell must never be served from a heuristic cache: its asset
+    // URLs are content-hashed, so a stale shell pins the previous build.
+    // no-cache forces revalidation (a fresh fetch here, since index.html
+    // carries no validators); hashed assets themselves stay cacheable.
+    res.writeHead(200, { 'content-type': MIME['.html'], 'cache-control': 'no-cache' })
     res.end(body)
   }
   if (target === distRoot || target === distIndex) {
