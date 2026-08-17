@@ -12,7 +12,22 @@
 - `ttftMs`/`ttftSteps` 累加并统计 `step/start` → 首个非空 delta chunk；首次尝试的边界在步内 `llm/retry` 后保留（与窗口 `resetForRetry` 对齐）。
 - `decodeMs`/`decodeTokens` 累加首 token → 已组装消息的时长与提供方上报的输出 token，仅统计两者兼备的步。
 - `toolMs` 按 callId 配对累加 `tool/call` → `tool/result`；未解决的调用在 `turn/end` 时丢弃（结果总在其轮内落地）。
-- 每个字段在首个贡献事件之前均为 0。已装配的 registry 恒提供该键，客户端读取值本身，而非键的存在性。
+- `openStep` — 当前打开的 step（空闲时为 null），实时暴露用于外部监控（`session_projcache.json`）。包含 `turn`、`step`、`startTime` 和 `firstTokenTime`（首个 delta 分块前为 null）。
+- `pendingCalls` — 尚未收到结果的工具调用分发时间，按 callId 索引。空闲或所有结果已归位时为空。
+- 每个数字字段在首个贡献事件之前均为 0；无进行中工作时 `openStep` 保持 `null`、`pendingCalls` 保持为空。已装配的 registry 恒提供该键，客户端读取值本身，而非键的存在性。
+
+## 配置
+
+### `stallThresholdMs`
+
+可选的 step stall 检测阈值（毫秒）。设置后，插件监视每个 step 的持续时间，当 step 超过阈值时输出警告。默认不启用。
+
+```yaml
+- id: session-stats
+  name: '@deepseek-ai/dsh-session-stats'
+  config:
+    stallThresholdMs: 300000
+```
 
 ## 组合
 
@@ -37,3 +52,4 @@
 - **被取消的步计数但不计时**——没有组装出 assistant 消息，其部分流式时间不进入任何墙钟数字，与窗口折叠的无计时 interrupted 节点一致；反之 max-tokens 的 usage 宿主消息贡献 surface 上看不到的模型时间。
 - **计数是日志口径，不是 surface 口径**——消息后来被压缩掉的步仍然计入；数字描述整个会话，而非当前模型可见 surface。
 - **仅挂载于 web-app bundle**——其他装配不提供 `sessionStats` 键，其消费者回退到窗口口径计数（Web 统计条的回退路径）。
+- **step stall 检测是尽力而为的**——可能因事件调度延迟而误报或漏报。不改变模型行为或中断请求，仅输出警告日志。

@@ -71,6 +71,14 @@ const sessionStatsSchema = z.object({
   ttftSteps: z.number().int().nonnegative(),
   decodeMs: z.number().nonnegative(),
   decodeTokens: z.number().nonnegative(),
+  // Live monitoring fields exposed through the view.
+  openStep: z.nullable(z.object({
+    turn: z.number().int().nonnegative(),
+    step: z.number().int().nonnegative(),
+    startTime: z.number().nonnegative(),
+    firstTokenTime: z.nullable(z.number().nonnegative()),
+  })),
+  pendingCalls: z.record(z.string(), z.number().nonnegative()),
 }).strict()
 
 /**
@@ -178,6 +186,12 @@ export const sessionStatsProjectionDefinition: ProjectionDefinition<'sessionStat
     ttftSteps: state.ttftSteps,
     decodeMs: state.decodeMs,
     decodeTokens: state.decodeTokens,
+    // Live state exposed for external monitoring (session_projcache.json).
+    openStep: state.openStep,
+    pendingCalls: state.pendingCalls,
   }),
-  stateVersion: 1,
+  // 2: the view now exposes the live openStep/pendingCalls monitoring fields; a
+  // version mismatch discards stale cached rows that lack them instead of
+  // serving them.
+  stateVersion: 2,
 }

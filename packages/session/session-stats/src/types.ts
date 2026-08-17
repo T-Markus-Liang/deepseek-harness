@@ -36,6 +36,17 @@ export interface SessionStatsProjection {
   decodeMs: number
   /** Summed provider output tokens over the same decode-timed steps. */
   decodeTokens: number
+  /**
+   * Current open step, null when idle. Cleared when the step closes or its
+   * message assembles. Exposed for live monitoring (e.g. `session_projcache.json`).
+   */
+  openStep: { turn: number; step: number; startTime: number; firstTokenTime: number | null } | null
+  /**
+   * Dispatch times of tool calls whose result has not yet landed, keyed by
+   * callId. Pruned when the result lands and dropped wholesale at `turn/end`.
+   * Exposed for live monitoring.
+   */
+  pendingCalls: Record<string, number>
 }
 
 declare module '@deepseek-ai/dsh-session-projection/types' {

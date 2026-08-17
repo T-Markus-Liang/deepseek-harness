@@ -51,6 +51,7 @@ function appendEmptyAssistantMessage(session: Session, turn: number, step: numbe
 function totals(overrides: Partial<SessionStatsProjection> = {}): SessionStatsProjection {
   return {
     turns: 0, steps: 0, llmMs: 0, toolMs: 0, ttftMs: 0, ttftSteps: 0, decodeMs: 0, decodeTokens: 0,
+    openStep: null, pendingCalls: {},
     ...overrides,
   }
 }
@@ -210,6 +211,17 @@ describe('sessionStats wall-time fold (controlled timestamps)', () => {
       at(1_500, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'partial' } }),
       at(2_000, 'step/end', { turn: 1, step: 1 }),
     ])).toEqual(totals({ turns: 1, steps: 1 }))
+  })
+
+  it('exposes the live open step and in-flight tool calls through the view', () => {
+    expect(fold([
+      at(1_000, 'step/start', { turn: 1, step: 1 }),
+      at(1_100, 'assistant/chunk', { turn: 1, step: 1, chunk: { type: 'text-delta', index: 0, text: 'a' } }),
+      at(1_200, 'tool/call', { turn: 1, step: 1, callId: 'pending', name: 'read', arguments: '{}' }),
+    ])).toEqual(totals({
+      openStep: { turn: 1, step: 1, startTime: 1_000, firstTokenTime: 1_100 },
+      pendingCalls: { pending: 1_200 },
+    }))
   })
 
   it('pairs tool wall time by callId, ignores orphan results, and prunes leftovers at turn/end', () => {

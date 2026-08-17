@@ -12,7 +12,22 @@ Function plugin registering the `sessionStats` projection unit: whole-log conver
 - `ttftMs`/`ttftSteps` sum and count `step/start` → first non-empty delta chunk; the first attempt's boundary survives an in-step `llm/retry` (window `resetForRetry` parity).
 - `decodeMs`/`decodeTokens` sum first token → assembled message and the provider-reported output tokens, only over steps carrying both.
 - `toolMs` sums `tool/call` → `tool/result` pairs matched by callId; unresolved calls are dropped at `turn/end` (results land within their turn).
-- Every field is 0 until its first contributing event. A composed registry always serves the key, so clients read the value, never key presence.
+- `openStep` — current open step (null when idle), exposed live for external monitoring via `session_projcache.json`. Contains `turn`, `step`, `startTime`, and `firstTokenTime` (null before first delta chunk).
+- `pendingCalls` — dispatch times of tool calls whose result has not yet landed, keyed by callId. Empty when idle or all results have settled.
+- Every figure is 0 until its first contributing event; `openStep` stays `null` and `pendingCalls` empty while nothing is outstanding. A composed registry always serves the key, so clients read the value, never key presence.
+
+## Config
+
+### `stallThresholdMs`
+
+Optional step stall detection threshold in milliseconds. When set, the plugin monitors each open step's duration and warns when a step exceeds this threshold. Disabled by default.
+
+```yaml
+- id: session-stats
+  name: '@deepseek-ai/dsh-session-stats'
+  config:
+    stallThresholdMs: 300000
+```
 
 ## Composition
 
@@ -37,3 +52,4 @@ None; the plugin never assembles or sends provider requests.
 - **A cancelled step is counted but untimed** — no assistant message assembles, so its partial stream time enters no wall-time figure, matching the window fold's untimed interrupted node; a max-tokens usage-host message conversely contributes model time the surface does not show.
 - **Counts are log-scoped, not surface-scoped** — steps whose messages were later compacted away stay counted; the figures describe the whole session, not the current model-visible surface.
 - **Mounted only in the web-app bundle** — other assemblies serve no `sessionStats` key, and their consumers fall back to window-scoped counting (the web stats strip's fallback path).
+- **Step stall detection is best-effort** — may false-positive or false-negative due to event dispatch timing. Does not alter model behavior or cancel requests; only emits warning logs.
