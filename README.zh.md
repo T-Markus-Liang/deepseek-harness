@@ -6,6 +6,12 @@ DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的�
 
 它采用**一切皆插件**的架构，并由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper)。
 
+## 核心特性
+
+- **一切皆插件** — 每个能力都是一个 Cordis 插件，通过 `cordis.yml` 组装（[架构](docs/architecture.md)）。
+- **持久会话日志** — 每一轮、每一步都会记录到可回放、利于压缩的会话日志中（[持久化](docs/subsystems/persistence.md)）。
+- **会话可观测** — 实时轮/步计数、墙钟时间、打开的 step 与进行中的工具调用，以及可选的 step 卡死告警；可从 projection cache 读取，供外部监控使用（[session-stats](packages/session/session-stats/README.md)）。
+
 ## 开发者预览
 
 DeepSeek Harness 目前处于 _开发者预览_ 阶段，正在快速迭代。**未来将出现破坏兼容性的变更。**

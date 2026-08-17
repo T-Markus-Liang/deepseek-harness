@@ -29,6 +29,32 @@
     stallThresholdMs: 300000
 ```
 
+## 实时监控
+
+view 携带实时打开的 step 与进行中的工具调用，使运维人员能够区分长时间但健康的流与卡住的 step。可从 projection cache（`~/.dsh/storages/session_projcache.json`）或 `session/projection` 变更流读取：
+
+```json
+{
+  "sessionStats": {
+    "openStep": { "turn": 9, "step": 11, "startTime": 1725000000000, "firstTokenTime": 1725000001000 },
+    "pendingCalls": { "call_1": 1725000001200 }
+  }
+}
+```
+
+- `openStep` — 空闲时为 `null`；否则为进行中的 step 及其 `startTime` 与 `firstTokenTime`（首个 delta 分块前为 null）。
+- `pendingCalls` — 尚未收到结果的工具调用分发时间（epoch 毫秒），按 callId 索引。
+
+### 卡死检测
+
+设置 `stallThresholdMs` 后，超过阈值仍未关闭的 step 会记录一条警告，标明会话、turn、step、已运行时间与阈值：
+
+```
+session "…": step stall — turn 9 step 11 has run 300123ms (threshold 300000ms)
+```
+
+监控器仅做观察：绝不取消 step 或改变调度。恢复决策由运维人员或外部监控负责，其读取的正是同一份 projection 数据。
+
 ## 组合
 
 ```yaml

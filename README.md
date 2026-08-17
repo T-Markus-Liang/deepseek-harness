@@ -6,6 +6,12 @@ DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek 
 
 It uses an architecture where **everything is a plugin**, and is powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper).
 
+## Key features
+
+- **Everything is a plugin** — every capability is a Cordis plugin assembled through `cordis.yml` ([architecture](docs/architecture.md)).
+- **Durable session logs** — every turn and step is recorded to a replayable, compaction-friendly log ([persistence](docs/subsystems/persistence.md)).
+- **Session observability** — live turn/step counts, wall times, the open step, and in-flight tool calls, plus optional step-stall warnings, readable from the projection cache for external monitoring ([session-stats](packages/session/session-stats/README.md)).
+
 ## Developer preview
 
 DeepSeek Harness is currently in _developer preview_ and is iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**

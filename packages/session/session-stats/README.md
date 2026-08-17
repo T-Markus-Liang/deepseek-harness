@@ -29,6 +29,32 @@ Optional step stall detection threshold in milliseconds. When set, the plugin mo
     stallThresholdMs: 300000
 ```
 
+## Live monitoring
+
+The view carries the live open step and in-flight tool calls so an operator can tell a long-but-healthy stream from a stuck step. Read them from the projection cache (`~/.dsh/storages/session_projcache.json`) or the `session/projection` change feed:
+
+```json
+{
+  "sessionStats": {
+    "openStep": { "turn": 9, "step": 11, "startTime": 1725000000000, "firstTokenTime": 1725000001000 },
+    "pendingCalls": { "call_1": 1725000001200 }
+  }
+}
+```
+
+- `openStep` — `null` when idle; otherwise the in-flight step with its `startTime` and `firstTokenTime` (null before the first delta chunk).
+- `pendingCalls` — dispatch times (epoch ms) of tool calls whose result has not landed, keyed by callId.
+
+### Stall detection
+
+With `stallThresholdMs` set, a step left open past the threshold logs one warning naming the session, turn, step, elapsed time, and threshold:
+
+```
+session "…": step stall — turn 9 step 11 has run 300123ms (threshold 300000ms)
+```
+
+The monitor is advisory only: it never cancels the step or changes scheduling. Recovery decisions belong to the operator or an external monitor, which reads the same projection data.
+
 ## Composition
 
 ```yaml
