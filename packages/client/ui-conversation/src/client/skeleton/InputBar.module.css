@@ -69,7 +69,10 @@
   border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
   border-radius: 22px;
   background: var(--dsw-specific-input-major);
+  background: color-mix(in srgb, var(--dsw-specific-input-major) 92%, transparent);
   box-shadow: var(--dsw-shadow-lv2);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
   font-size: 16px;
   line-height: 24px;
   /* Elevated surface in dark, same as the menus: the draft scrollport inside

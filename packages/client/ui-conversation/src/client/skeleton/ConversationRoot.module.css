@@ -8,7 +8,10 @@
   flex-direction: column;
   height: 100%;
   min-width: 0;
-  background: var(--dsw-alias-bg-base);
+  /* The AppFrame shell owns the page backdrop and paints the glass veil;
+     the conversation column stays transparent so that treatment remains
+     visible behind the transcript spacing. */
+  background: transparent;
 
   /* Shared width axis for the whole column: one content width W
      (--dsh-chat-content-width) for the transcript, the dock cards

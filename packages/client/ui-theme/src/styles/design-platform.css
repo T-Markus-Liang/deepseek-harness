@@ -336,3 +336,26 @@ body[data-ds-dark-theme] {
   --dsw-specific-sidebar-nav-item-hover: var(--dsw-static-neutral-bluish-850);
   --dsw-specific-tip: var(--dsw-static-neutral-bluish-800);
 }
+
+/* Black Whale shell backdrop tokens, consumed only by ui-layout's AppFrame
+   shell. The semantic surfaces stay unchanged; these values control the
+   frame gradient, sonar rings, particle dust, and whale opacity beneath
+   them. Dark mode carries the stronger black-whale treatment; light mode
+   keeps the same structure at daylight contrast. */
+body {
+  --dsw-specific-black-whale-bg-top: rgb(244, 247, 251);
+  --dsw-specific-black-whale-bg-bottom: rgb(230, 238, 247);
+  --dsw-specific-black-whale-glow: rgba(65, 118, 230, 0.1);
+  --dsw-specific-black-whale-sonar: rgba(65, 118, 230, 0.16);
+  --dsw-specific-black-whale-dust: rgba(65, 118, 230, 0.18);
+  --dsw-specific-black-whale-whale-opacity: 0.1;
+}
+
+body[data-ds-dark-theme] {
+  --dsw-specific-black-whale-bg-top: rgb(13, 17, 27);
+  --dsw-specific-black-whale-bg-bottom: rgb(4, 6, 10);
+  --dsw-specific-black-whale-glow: rgba(103, 158, 254, 0.12);
+  --dsw-specific-black-whale-sonar: rgba(103, 158, 254, 0.16);
+  --dsw-specific-black-whale-dust: rgba(147, 197, 253, 0.18);
+  --dsw-specific-black-whale-whale-opacity: 0.42;
+}

@@ -1,10 +1,15 @@
 .frame {
   position: relative; /* anchors the drag handles, which straddle column borders */
+  isolation: isolate;
   display: grid;
   grid-template-rows: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--dsw-alias-bg-base);
+  background: linear-gradient(
+    180deg,
+    var(--dsw-specific-black-whale-bg-top),
+    var(--dsw-specific-black-whale-bg-bottom)
+  );
   /* Collapse/expand animates the tracks on the deepsuite sider curve
      (--ds-ease-in-out / --ds-transition-duration-slow, ui-theme base.css). */
   transition: grid-template-columns var(--ds-transition-duration-slow) var(--ds-ease-in-out);
@@ -23,23 +28,40 @@
 }
 
 .sidebarCol {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   overflow: hidden;
   background: var(--dsw-specific-sidebar-fill);
+  background: color-mix(in srgb, var(--dsw-specific-sidebar-fill) 88%, transparent);
   border-right: 1px solid var(--dsw-alias-border-l1);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
 }
 
 .centerCol {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--dsw-alias-bg-base);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 76%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
 }
 
 .detailsCol {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   overflow: hidden;
+  background: var(--dsw-alias-bg-base);
+  background: color-mix(in srgb, var(--dsw-alias-bg-base) 88%, transparent);
   border-left: 1px solid var(--dsw-alias-border-l2);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
 }
 
 /* The details subtree stays mounted at zero width, so its border must not paint
@@ -116,4 +138,109 @@
 
 .overlayLayer > * {
   pointer-events: auto;
+}
+
+/* Black Whale shell backdrop. Decorative only: the layer stays below the
+   three columns and is inert to pointer input, while the columns remain
+   translucent enough for the whale to read through their negative space. */
+.brandBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.brandGlow {
+  position: absolute;
+  inset: -18%;
+  background:
+    radial-gradient(ellipse at 74% 28%, var(--dsw-specific-black-whale-glow) 0, transparent 46%),
+    radial-gradient(ellipse at 18% 78%, var(--dsw-specific-black-whale-glow) 0, transparent 40%);
+}
+
+.brandRings {
+  position: absolute;
+  top: 12%;
+  right: max(-14vw, -160px);
+  width: 72vmin;
+  height: 72vmin;
+}
+
+.sonarRing {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--dsw-specific-black-whale-sonar);
+  border-radius: 50%;
+  box-shadow: 0 0 32px var(--dsw-specific-black-whale-glow);
+  opacity: 0;
+  animation: blackWhaleSonar 9s var(--ds-ease-in-out) infinite;
+}
+
+.sonarRing:nth-child(2) {
+  inset: 16%;
+  animation-delay: 3s;
+}
+
+.sonarRing:nth-child(3) {
+  inset: 32%;
+  animation-delay: 6s;
+}
+
+.brandWhale {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  width: min(68vw, 920px);
+  max-width: none;
+  transform: translate(-38%, -50%) rotate(-4deg);
+  opacity: var(--dsw-specific-black-whale-whale-opacity);
+  filter: drop-shadow(0 0 48px var(--dsw-specific-black-whale-glow));
+  user-select: none;
+}
+
+.brandDust {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, var(--dsw-specific-black-whale-dust) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 72% 62%, var(--dsw-specific-black-whale-dust) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 42% 84%, var(--dsw-specific-black-whale-dust) 0 1px, transparent 1.7px);
+  background-position: 0 0, 48px 72px, 120px 32px;
+  background-size: 180px 180px, 240px 240px, 320px 320px;
+  opacity: 0.72;
+  animation: blackWhaleDrift 28s linear infinite;
+}
+
+@keyframes blackWhaleSonar {
+  0% {
+    transform: scale(0.82);
+    opacity: 0;
+  }
+
+  42% {
+    opacity: 0.48;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes blackWhaleDrift {
+  to {
+    background-position: 180px 180px, 288px 312px, 440px 352px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brandDust,
+  .sonarRing {
+    animation: none;
+  }
+
+  .sonarRing {
+    opacity: 0.08;
+  }
 }

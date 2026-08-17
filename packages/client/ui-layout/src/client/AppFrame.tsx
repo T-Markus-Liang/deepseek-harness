@@ -170,6 +170,20 @@ export function AppFrame({
       data-details-collapsed={cols.details === 0 || undefined}
       data-dragging={dragging || undefined}
     >
+      {/* Non-interactive Black Whale backdrop: the frame gradient lives on
+          .frame itself; this layer carries the glow, sonar rings, whale, and
+          particle dust below the columns. It is pointer-inert so it cannot
+          block drag handles or shell overlays. */}
+      <div className={css.brandBackdrop} aria-hidden="true">
+        <div className={css.brandGlow} />
+        <div className={css.brandRings}>
+          <span className={css.sonarRing} />
+          <span className={css.sonarRing} />
+          <span className={css.sonarRing} />
+        </div>
+        <img className={css.brandWhale} src="/whale.svg" alt="" draggable={false} />
+        <div className={css.brandDust} />
+      </div>
       <div className={css.sidebarCol}>
         {/* Render-site slot call with live concession output: a closed
             sidebar keeps the mounted slot at the compact-rail width, and the
