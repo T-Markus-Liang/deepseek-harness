@@ -79,9 +79,14 @@ interface ToolArgsMap {
     /** Required with sandbox_permissions: one sentence for the user explaining why this exact file operation needs the wider access. */
     justification?: string;
   } & Record<string, JsonValue>;
+  /** Read the latest recorded result of one of your direct continuable background subagents without resuming it, sending a message, or starting a model turn. Use this when a completion notice may have been missed. Active means the agent still has a live activation; inactive means it is stored between turns and can still be resumed later. */
+  get_agent_result: {
+    /** The durable id of your direct continuable subagent. */
+    subagent_id: string;
+  } & Record<string, JsonValue>;
   /** Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal. */
   get_goal: Record<string, JsonValue>;
-  /** Request cancellation of a background agent's current turn by its agent id. The target may be your direct child or a deeper agent created under you. Only the current turn stops: messages already queued for the agent stay parked until a later send_message, agents it started keep running, and the agent itself stays available for follow-ups. This call returns as soon as the stop request is accepted, so the target may keep running briefly; interrupting an agent that already finished is an accepted no-op. */
+  /** Request cancellation of a background agent's current turn by its agent id. The target may be your direct child or a deeper agent created under you. Only the current turn stops: messages already queued for the agent stay parked until a later send_message, agents it started keep running, and the agent itself stays available for follow-ups. This call returns as soon as the stop request is accepted, so the target may keep running briefly. The result distinguishes a requested interrupt from a target that is already settling or has no live continuable activation. */
   interrupt_agent: {
     /** The agent id of the running agent to interrupt. */
     agent_id: string;
@@ -273,6 +278,11 @@ interface ToolOutputMap {
     before: string;
     after: string;
   };
+  get_agent_result: {
+    activity: "active" | "inactive";
+    output: JsonValue[];
+    stopReason?: "completed" | "aborted" | "error" | "max-tokens" | "refusal";
+  };
   get_goal: {
     goal: null;
   } | {
@@ -291,7 +301,7 @@ interface ToolOutputMap {
     activation: "armed" | "disarmed";
   };
   interrupt_agent: {
-    accepted: boolean;
+    outcome: "requested" | "already-settled" | "not-live";
   };
   job_kill: {
     outcome: "cancellation-requested" | "already-finished";
