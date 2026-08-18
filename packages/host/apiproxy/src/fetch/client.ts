@@ -37,7 +37,8 @@ import {
   workspaceDeleteValueSchema,
   workspaceInsertBeforeValueSchema,
   workspaceInsertSessionBeforeValueSchema,
-  workspaceListValueSchema,
+  workspaceListValueSchema, workspaceListTreeLevelValueSchema, workspaceReadFilePreviewValueSchema,
+  workspaceGitStatusValueSchema, workspaceGitFileDiffValueSchema,
   workspaceRenameValueSchema,
 } from '../api/workspace.schema.ts'
 import { skillListValueSchema } from '../api/skills.schema.ts'
@@ -120,6 +121,10 @@ export interface IApiClient {
     insertBefore(payload: RequestPayload<'workspace.insertBefore'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.insertBefore'>>>
     insertSessionBefore(payload: RequestPayload<'workspace.insertSessionBefore'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.insertSessionBefore'>>>
     archiveSession(payload: RequestPayload<'workspace.archiveSession'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.archiveSession'>>>
+    listTreeLevel(payload: RequestPayload<'workspace.listTreeLevel'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.listTreeLevel'>>>
+    readFilePreview(payload: RequestPayload<'workspace.readFilePreview'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.readFilePreview'>>>
+    gitStatus(payload: RequestPayload<'workspace.gitStatus'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.gitStatus'>>>
+    gitFileDiff(payload: RequestPayload<'workspace.gitFileDiff'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'workspace.gitFileDiff'>>>
   }
   skills: {
     list(payload: RequestPayload<'skill.list'>, signal?: AbortSignal): Promise<RpcResponse<ResponseValue<'skill.list'>>>
@@ -198,6 +203,10 @@ const UNARY_VALUE_SCHEMAS: { [K in keyof RpcMethodMap]: z.ZodType<Wire<ResponseV
   'workspace.insertBefore': workspaceInsertBeforeValueSchema,
   'workspace.insertSessionBefore': workspaceInsertSessionBeforeValueSchema,
   'workspace.archiveSession': workspaceArchiveSessionValueSchema,
+  'workspace.listTreeLevel': workspaceListTreeLevelValueSchema,
+  'workspace.readFilePreview': workspaceReadFilePreviewValueSchema,
+  'workspace.gitStatus': workspaceGitStatusValueSchema,
+  'workspace.gitFileDiff': workspaceGitFileDiffValueSchema,
   'skill.list': skillListValueSchema,
   'agentPreset.list': agentPresetListValueSchema,
   'agentPreset.select': agentPresetSelectValueSchema,
@@ -451,6 +460,10 @@ export abstract class AbstractApiClient implements IApiClient {
     insertBefore: (payload, signal) => this.callUnary('workspace.insertBefore', payload, signal),
     insertSessionBefore: (payload, signal) => this.callUnary('workspace.insertSessionBefore', payload, signal),
     archiveSession: (payload, signal) => this.callUnary('workspace.archiveSession', payload, signal),
+    listTreeLevel: (payload, signal) => this.callUnary('workspace.listTreeLevel', payload, signal),
+    readFilePreview: (payload, signal) => this.callUnary('workspace.readFilePreview', payload, signal),
+    gitStatus: (payload, signal) => this.callUnary('workspace.gitStatus', payload, signal),
+    gitFileDiff: (payload, signal) => this.callUnary('workspace.gitFileDiff', payload, signal),
   }
 
   readonly skills: IApiClient['skills'] = {

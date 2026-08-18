@@ -23,6 +23,8 @@ import { SubagentError } from '@deepseek-ai/dsh-subagent'
 import type { SubagentListEntry as CatalogSubagentListEntry } from '@deepseek-ai/dsh-subagent'
 import { isUserInvocable } from '@deepseek-ai/dsh-skill'
 import type { Workspace, WorkspaceRecord } from '@deepseek-ai/dsh-workspace'
+import { WorkspaceInspectorError } from '@deepseek-ai/dsh-workspace-inspector'
+import type {} from '@deepseek-ai/dsh-workspace-inspector'
 import {
   workspaceDomainState, workspaceRecord, WorkspaceId as brandWorkspaceId,
   WorkspaceMoveInvalidError, WorkspaceOrderInvalidError, WorkspaceUnknownSessionError,
@@ -2840,6 +2842,46 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           })
         }
         return ok(request, { workspace: workspaceView(workspace) })
+      },
+
+      async listTreeLevel(request, signal) {
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(request.payload.workspaceId))
+        if (workspace === undefined) return workspaceNotFound(request, request.payload.workspaceId)
+        try {
+          return ok(request, await ctx.workspaceInspector.listTreeLevel(workspace.path, request.payload.path ?? '', signal))
+        } catch (error) {
+          return err(request, { code: 'internal', message: error instanceof WorkspaceInspectorError ? error.message : 'workspace inspection failed', details: {} })
+        }
+      },
+
+      async readFilePreview(request, signal) {
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(request.payload.workspaceId))
+        if (workspace === undefined) return workspaceNotFound(request, request.payload.workspaceId)
+        try {
+          return ok(request, await ctx.workspaceInspector.readFilePreview(workspace.path, request.payload.path, signal))
+        } catch (error) {
+          return err(request, { code: 'internal', message: error instanceof WorkspaceInspectorError ? error.message : 'workspace inspection failed', details: {} })
+        }
+      },
+
+      async gitStatus(request, signal) {
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(request.payload.workspaceId))
+        if (workspace === undefined) return workspaceNotFound(request, request.payload.workspaceId)
+        try {
+          return ok(request, await ctx.workspaceInspector.gitStatus(workspace.path, signal))
+        } catch (error) {
+          return err(request, { code: 'internal', message: error instanceof WorkspaceInspectorError ? error.message : 'Git inspection failed', details: {} })
+        }
+      },
+
+      async gitFileDiff(request, signal) {
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(request.payload.workspaceId))
+        if (workspace === undefined) return workspaceNotFound(request, request.payload.workspaceId)
+        try {
+          return ok(request, await ctx.workspaceInspector.gitFileDiff(workspace.path, request.payload.path, request.payload.basis, signal))
+        } catch (error) {
+          return err(request, { code: 'internal', message: error instanceof WorkspaceInspectorError ? error.message : 'Git inspection failed', details: {} })
+        }
       },
 
       async archiveSession(request) {

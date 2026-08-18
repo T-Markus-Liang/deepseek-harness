@@ -73,6 +73,9 @@
     - id: workspace
       name: '@deepseek-ai/dsh-workspace'
 
+    - id: workspace-inspector
+      name: '@deepseek-ai/dsh-workspace-inspector'
+
     - id: session-projection-cache
       name: '@deepseek-ai/dsh-session-projection-cache'
       config:

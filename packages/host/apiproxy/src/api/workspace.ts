@@ -35,6 +35,13 @@ export interface WorkspaceView {
   updatedAt: string
 }
 
+export interface WorkspaceTreeEntry { path: string; name: string; type: 'file' | 'directory' | 'other'; size?: number; hidden: boolean }
+export interface WorkspaceTreeLevel { path: string; entries: WorkspaceTreeEntry[]; truncated: boolean }
+export interface WorkspaceFilePreview { path: string; text: string; totalBytes: number; language?: string }
+export interface WorkspaceGitFile { path: string; index: string; worktree: string; originalPath?: string }
+export interface WorkspaceGitStatus { branch?: string; ahead: number; behind: number; files: WorkspaceGitFile[] }
+export interface WorkspaceGitDiff { path: string; basis: 'staged' | 'worktree'; oldText: string | null; newText: string }
+
 /** Workspace-domain unary methods (the map keys workspace.* of RpcMethodMap). */
 export interface WorkspaceApi {
   /**
@@ -106,4 +113,13 @@ export interface WorkspaceApi {
    */
   archiveSession(request: RpcRequest<{ sessionId: SessionId }>):
   Promise<RpcResponse<{ archivedSessionIds: SessionId[] }>>
+
+  listTreeLevel(
+    request: RpcRequest<{ workspaceId: WorkspaceId; path?: string }>, signal: AbortSignal,
+  ): Promise<RpcResponse<WorkspaceTreeLevel>>
+  readFilePreview(
+    request: RpcRequest<{ workspaceId: WorkspaceId; path: string }>, signal: AbortSignal,
+  ): Promise<RpcResponse<WorkspaceFilePreview>>
+  gitStatus(request: RpcRequest<{ workspaceId: WorkspaceId }>, signal: AbortSignal): Promise<RpcResponse<WorkspaceGitStatus>>
+  gitFileDiff(request: RpcRequest<{ workspaceId: WorkspaceId; path: string; basis: 'staged' | 'worktree' }>, signal: AbortSignal): Promise<RpcResponse<WorkspaceGitDiff>>
 }

@@ -3,7 +3,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {
   DirectoryListing, IApiClient, RpcError,
-  SessionId, WorkspaceId, WorkspaceView,
+  SessionId, WorkspaceFilePreview, WorkspaceGitDiff, WorkspaceGitStatus, WorkspaceId, WorkspaceTreeLevel, WorkspaceView,
 } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SnapshotStore } from '../contract/store.ts'
 import { createSnapshotStore } from '../contract/store.ts'
@@ -232,6 +232,30 @@ export class WorkspaceRuntime implements IWorkspaces {
    * @param name - single non-blank path segment.
    * @returns the created directory's absolute path.
    */
+  async listTreeLevel(workspaceId: WorkspaceId, path = '', signal?: AbortSignal): Promise<WorkspaceTreeLevel> {
+    const response = await this.api.workspace.listTreeLevel({ workspaceId, ...(path === '' ? {} : { path }) }, signal)
+    if (!response.result.ok) throw new Error(`workspace tree failed: ${response.result.error.message}`)
+    return response.result.value
+  }
+
+  async readFilePreview(workspaceId: WorkspaceId, path: string, signal?: AbortSignal): Promise<WorkspaceFilePreview> {
+    const response = await this.api.workspace.readFilePreview({ workspaceId, path }, signal)
+    if (!response.result.ok) throw new Error(`workspace file preview failed: ${response.result.error.message}`)
+    return response.result.value
+  }
+
+  async gitStatus(workspaceId: WorkspaceId, signal?: AbortSignal): Promise<WorkspaceGitStatus> {
+    const response = await this.api.workspace.gitStatus({ workspaceId }, signal)
+    if (!response.result.ok) throw new Error(`workspace Git status failed: ${response.result.error.message}`)
+    return response.result.value
+  }
+
+  async gitFileDiff(workspaceId: WorkspaceId, path: string, basis: 'staged' | 'worktree', signal?: AbortSignal): Promise<WorkspaceGitDiff> {
+    const response = await this.api.workspace.gitFileDiff({ workspaceId, path, basis }, signal)
+    if (!response.result.ok) throw new Error(`workspace Git diff failed: ${response.result.error.message}`)
+    return response.result.value
+  }
+
   async createDirectory(path: string, name: string): Promise<string> {
     const response = await this.api.host.createDirectory({ path, name })
     if (!response.result.ok) throw new DirectoryBrowseError(response.result.error)

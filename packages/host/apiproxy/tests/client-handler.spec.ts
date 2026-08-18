@@ -88,6 +88,10 @@ function scriptedApi(overrides: {
       insertBefore: r => ok(r, { workspaceIds: [r.payload.workspaceId] }),
       insertSessionBefore: r => ok(r, { workspace: { workspaceId: 'w1' as never, path: '/t', title: 't', sessionIds: [], createdAt: '0', updatedAt: '0' } }),
       archiveSession: r => ok(r, { archivedSessionIds: [r.payload.sessionId] }),
+      listTreeLevel: r => ok(r, { path: '', entries: [], truncated: false }),
+      readFilePreview: r => ok(r, { path: '', text: '', totalBytes: 0 }),
+      gitStatus: r => ok(r, { branch: 'main', ahead: 0, behind: 0, files: [] }),
+      gitFileDiff: r => ok(r, { path: '', basis: 'worktree' as const, oldText: null, newText: '' }),
     },
     skills: { list: r => ok(r, { skills: [] }), ...overrides.skills },
     agentPresets: {

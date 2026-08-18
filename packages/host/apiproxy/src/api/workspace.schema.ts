@@ -7,7 +7,7 @@
 import { z } from 'zod'
 import type { RequestPayload, ResponseValue } from './rpc-map.ts'
 import type { Wire } from './rpc.schema.ts'
-import type { WorkspaceView } from './workspace.ts'
+import type { WorkspaceFilePreview, WorkspaceGitDiff, WorkspaceGitStatus, WorkspaceTreeLevel, WorkspaceView } from './workspace.ts'
 import { sessionIdSchema, workspaceIdSchema } from './sessions.schema.ts'
 
 export { workspaceIdSchema } from './sessions.schema.ts'
@@ -98,3 +98,27 @@ export const workspaceArchiveSessionRequestSchema = z.object({
 export const workspaceArchiveSessionValueSchema = z.object({
   archivedSessionIds: z.array(sessionIdSchema),
 }) satisfies z.ZodType<Wire<ResponseValue<'workspace.archiveSession'>>>
+const treeEntrySchema = z.object({ path: z.string(), name: z.string(), type: z.enum(['file', 'directory', 'other']), size: z.number().optional(), hidden: z.boolean() })
+export const workspaceListTreeLevelRequestSchema = z.object({ workspaceId: workspaceIdSchema, path: z.string().optional() }) satisfies z.ZodType<Wire<RequestPayload<'workspace.listTreeLevel'>>>
+export const workspaceListTreeLevelValueSchema = z.object({
+  path: z.string(),
+  entries: z.array(treeEntrySchema),
+  truncated: z.boolean(),
+}) satisfies z.ZodType<Wire<WorkspaceTreeLevel>>
+export const workspaceReadFilePreviewRequestSchema = z.object({ workspaceId: workspaceIdSchema, path: z.string().min(1) }) satisfies z.ZodType<Wire<RequestPayload<'workspace.readFilePreview'>>>
+export const workspaceReadFilePreviewValueSchema = z.object({
+  path: z.string(),
+  text: z.string(),
+  totalBytes: z.number(),
+  language: z.string().optional(),
+}) satisfies z.ZodType<Wire<WorkspaceFilePreview>>
+const gitFileSchema = z.object({ path: z.string(), index: z.string(), worktree: z.string(), originalPath: z.string().optional() })
+export const workspaceGitStatusRequestSchema = z.object({ workspaceId: workspaceIdSchema }) satisfies z.ZodType<Wire<RequestPayload<'workspace.gitStatus'>>>
+export const workspaceGitStatusValueSchema = z.object({
+  branch: z.string().optional(),
+  ahead: z.number(),
+  behind: z.number(),
+  files: z.array(gitFileSchema),
+}) satisfies z.ZodType<Wire<WorkspaceGitStatus>>
+export const workspaceGitFileDiffRequestSchema = z.object({ workspaceId: workspaceIdSchema, path: z.string().min(1), basis: z.enum(['staged', 'worktree']) }) satisfies z.ZodType<Wire<RequestPayload<'workspace.gitFileDiff'>>>
+export const workspaceGitFileDiffValueSchema = z.object({ path: z.string(), basis: z.enum(['staged', 'worktree']), oldText: z.string().nullable(), newText: z.string() }) satisfies z.ZodType<Wire<WorkspaceGitDiff>>

@@ -191,6 +191,18 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       async archiveSession(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { archivedSessionIds: [request.payload.sessionId] } } }
       },
+      async listTreeLevel(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { path: '', entries: [], truncated: false } } }
+      },
+      async readFilePreview(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { path: '', text: '', totalBytes: 0 } } }
+      },
+      async gitStatus(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { branch: 'main', ahead: 0, behind: 0, files: [] } } }
+      },
+      async gitFileDiff(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { path: '', basis: 'worktree' as const, oldText: null, newText: '' } } }
+      },
     },
     agentPresets: {
       list(request: RpcRequest<{}>) {

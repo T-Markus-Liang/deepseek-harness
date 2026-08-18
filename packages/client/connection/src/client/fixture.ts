@@ -34,7 +34,8 @@ import { deriveEventMessage, foldSurface } from '@deepseek-ai/dsh-session/surfac
 import type {
   ApiProxy, ClientRequest, ClientResponse, HistoryEntry, HostFrame, MuxFrame, RpcReceipt,
   ModelProviderGroup, ModelSelection, RpcRequest, RpcResponse, RpcResult, ServerRequest, ServerResponse, SessionSummary,
-  ToolCallView, ToolEventView, ToolResultView, WorkspaceId, WorkspaceView,
+  ToolCallView, ToolEventView, ToolResultView, WorkspaceFilePreview, WorkspaceGitDiff,
+  WorkspaceGitStatus, WorkspaceId, WorkspaceTreeLevel, WorkspaceView,
 } from './api.ts'
 import type { RequestPayload, ResponseValue, RpcMethodMap } from '@deepseek-ai/dsh-host-apiproxy/api'
 import { AbstractApiClient, RpcId, SESSION_SEARCH_RESULT_LIMIT } from './api.ts'
@@ -2568,6 +2569,10 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         items: workspaces.map(w => ({ ...w })),
         archivedSessionIds: [...archivedSessionIds],
       }),
+      listTreeLevel: request => ok(request, { path: request.payload.path ?? '', entries: [], truncated: false } satisfies WorkspaceTreeLevel),
+      readFilePreview: request => ok(request, { path: request.payload.path, text: '', totalBytes: 0 } satisfies WorkspaceFilePreview),
+      gitStatus: request => ok(request, { branch: 'fixture', ahead: 0, behind: 0, files: [] } satisfies WorkspaceGitStatus),
+      gitFileDiff: request => ok(request, { path: request.payload.path, basis: request.payload.basis, oldText: null, newText: '' } satisfies WorkspaceGitDiff),
       create: (request) => {
         const { path } = request.payload
         const existing = workspaces.find(w => w.path === path)
@@ -3105,6 +3110,10 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'workspace.insertBefore': return this.api.workspace.insertBefore(request)
       case 'workspace.insertSessionBefore': return this.api.workspace.insertSessionBefore(request)
       case 'workspace.archiveSession': return this.api.workspace.archiveSession(request)
+      case 'workspace.listTreeLevel': return this.api.workspace.listTreeLevel(request, signal)
+      case 'workspace.readFilePreview': return this.api.workspace.readFilePreview(request, signal)
+      case 'workspace.gitStatus': return this.api.workspace.gitStatus(request, signal)
+      case 'workspace.gitFileDiff': return this.api.workspace.gitFileDiff(request, signal)
       case 'skill.list': return this.api.skills.list(request)
       case 'agentPreset.list': return this.api.agentPresets.list(request)
       case 'agentPreset.select': return this.api.agentPresets.select(request)

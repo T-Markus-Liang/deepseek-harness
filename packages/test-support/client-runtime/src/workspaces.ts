@@ -1,7 +1,8 @@
 /** Test-owned workspaces face: the renderer standard-kit observable plus recorded actions. */
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import type {
-  DirectoryListing, IWorkspaces, SessionId, SnapshotStore, WorkspaceId, WorkspaceListState, WorkspaceView,
+  DirectoryListing, IWorkspaces, SessionId, SnapshotStore, WorkspaceFilePreview, WorkspaceGitDiff,
+  WorkspaceGitStatus, WorkspaceId, WorkspaceListState, WorkspaceTreeLevel, WorkspaceView,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import { workspaceListState } from './fixtures.ts'
 import type { Stabilizer } from './fixtures.ts'
@@ -86,6 +87,26 @@ export class TestWorkspaces implements IWorkspaces {
       path: input.path,
       sessionIds: [],
     } as unknown as WorkspaceView
+  }
+
+  async listTreeLevel(workspaceId: WorkspaceId, path = '', signal?: AbortSignal): Promise<WorkspaceTreeLevel> {
+    this.calls.push({ method: 'listTreeLevel', args: [workspaceId, path, signal] })
+    return await (this.stubs.get('listTreeLevel')?.(workspaceId, path, signal) as Promise<WorkspaceTreeLevel> | undefined) ?? { path, entries: [], truncated: false }
+  }
+
+  async readFilePreview(workspaceId: WorkspaceId, path: string, signal?: AbortSignal): Promise<WorkspaceFilePreview> {
+    this.calls.push({ method: 'readFilePreview', args: [workspaceId, path, signal] })
+    return await (this.stubs.get('readFilePreview')?.(workspaceId, path, signal) as Promise<WorkspaceFilePreview> | undefined) ?? { path, text: '', totalBytes: 0 }
+  }
+
+  async gitStatus(workspaceId: WorkspaceId, signal?: AbortSignal): Promise<WorkspaceGitStatus> {
+    this.calls.push({ method: 'gitStatus', args: [workspaceId, signal] })
+    return await (this.stubs.get('gitStatus')?.(workspaceId, signal) as Promise<WorkspaceGitStatus> | undefined) ?? { branch: 'test', ahead: 0, behind: 0, files: [] }
+  }
+
+  async gitFileDiff(workspaceId: WorkspaceId, path: string, basis: 'staged' | 'worktree', signal?: AbortSignal): Promise<WorkspaceGitDiff> {
+    this.calls.push({ method: 'gitFileDiff', args: [workspaceId, path, basis, signal] })
+    return await (this.stubs.get('gitFileDiff')?.(workspaceId, path, basis, signal) as Promise<WorkspaceGitDiff> | undefined) ?? { path, basis, oldText: null, newText: '' }
   }
 
   /**
