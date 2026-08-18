@@ -2571,7 +2571,7 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
       }),
       listTreeLevel: request => ok(request, { path: request.payload.path ?? '', entries: [], truncated: false } satisfies WorkspaceTreeLevel),
       readFilePreview: request => ok(request, { path: request.payload.path, text: '', totalBytes: 0 } satisfies WorkspaceFilePreview),
-      gitStatus: request => ok(request, { branch: 'fixture', ahead: 0, behind: 0, files: [] } satisfies WorkspaceGitStatus),
+      gitStatus: request => ok(request, { branch: 'fixture', ahead: 0, behind: 0, files: [], truncated: false } satisfies WorkspaceGitStatus),
       gitFileDiff: request => ok(request, { path: request.payload.path, basis: request.payload.basis, oldText: null, newText: '' } satisfies WorkspaceGitDiff),
       create: (request) => {
         const { path } = request.payload

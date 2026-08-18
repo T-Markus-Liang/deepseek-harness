@@ -119,12 +119,13 @@ export const workspaceReadFilePreviewValueSchema = z.object({
 const gitFileSchema = z.object({ path: z.string(), index: z.string(), worktree: z.string(), originalPath: z.string().optional() })
 /** workspace.gitStatus request: the workspace id only. */
 export const workspaceGitStatusRequestSchema = z.object({ workspaceId: workspaceIdSchema }) satisfies z.ZodType<Wire<RequestPayload<'workspace.gitStatus'>>>
-/** workspace.gitStatus response value: branch, ahead/behind counts, all uncommitted files. */
+/** workspace.gitStatus response value: branch, ahead/behind counts, uncommitted files, truncation flag. */
 export const workspaceGitStatusValueSchema = z.object({
   branch: z.string().optional(),
   ahead: z.number(),
   behind: z.number(),
   files: z.array(gitFileSchema),
+  truncated: z.boolean(),
 }) satisfies z.ZodType<Wire<WorkspaceGitStatus>>
 /** workspace.gitFileDiff request: workspace id, relative path, and the comparison basis. */
 export const workspaceGitFileDiffRequestSchema = z.object({ workspaceId: workspaceIdSchema, path: z.string().min(1), basis: z.enum(['staged', 'worktree']) }) satisfies z.ZodType<Wire<RequestPayload<'workspace.gitFileDiff'>>>

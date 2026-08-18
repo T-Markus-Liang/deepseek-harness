@@ -169,7 +169,7 @@ export class FakeApiClient implements IApiClient {
     }))),
     listTreeLevel: (payload: unknown) => this.record('workspace.listTreeLevel', payload, Promise.resolve(ok({ path: '', entries: [], truncated: false }))),
     readFilePreview: (payload: unknown) => this.record('workspace.readFilePreview', payload, Promise.resolve(ok({ path: '', text: '', totalBytes: 0 }))),
-    gitStatus: (payload: unknown) => this.record('workspace.gitStatus', payload, Promise.resolve(ok({ branch: 'fake', ahead: 0, behind: 0, files: [] }))),
+    gitStatus: (payload: unknown) => this.record('workspace.gitStatus', payload, Promise.resolve(ok({ branch: 'fake', ahead: 0, behind: 0, files: [], truncated: false }))),
     gitFileDiff: (payload: unknown) => this.record('workspace.gitFileDiff', payload, Promise.resolve(ok({ path: '', basis: 'worktree' as const, oldText: null, newText: '' }))),
   }
 

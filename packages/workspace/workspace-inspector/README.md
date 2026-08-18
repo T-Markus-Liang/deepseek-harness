@@ -16,5 +16,5 @@ None: no model request changes.
 
 ## Known Limitations and Deferred Work
 
-- **Bounds are fixed in code** — the entry count, text byte, and Git output caps are compile-time constants, not per-deployment configuration.
+- **Bounds are fixed in code** — the entry count, text byte, and Git output caps are compile-time constants, not per-deployment configuration. A status that exceeds the Git output cap returns the complete records retained under the cap with `truncated: true` (the branch header can be cut away); text bases still fail because a cut payload would corrupt the diff.
 - **No live invalidation** — callers refresh explicitly; the service owns no file watching or cache.

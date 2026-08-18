@@ -125,6 +125,7 @@ export function ChangesView({ useSessions, useWorkspaces, gitStatus, openPreview
           </button>
         </div>
       </div>
+      {state.status === 'ready' && state.data.truncated && <div className={css.note}>{t('changes.truncated')}</div>}
       <div className={css.body}>{renderBody()}</div>
     </div>
   )

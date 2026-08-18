@@ -90,7 +90,7 @@ function scriptedApi(overrides: {
       archiveSession: r => ok(r, { archivedSessionIds: [r.payload.sessionId] }),
       listTreeLevel: r => ok(r, { path: '', entries: [], truncated: false }),
       readFilePreview: r => ok(r, { path: '', text: '', totalBytes: 0 }),
-      gitStatus: r => ok(r, { branch: 'main', ahead: 0, behind: 0, files: [] }),
+      gitStatus: r => ok(r, { branch: 'main', ahead: 0, behind: 0, files: [], truncated: false }),
       gitFileDiff: r => ok(r, { path: '', basis: 'worktree' as const, oldText: null, newText: '' }),
     },
     skills: { list: r => ok(r, { skills: [] }), ...overrides.skills },

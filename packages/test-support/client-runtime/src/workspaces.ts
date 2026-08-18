@@ -101,7 +101,7 @@ export class TestWorkspaces implements IWorkspaces {
 
   async gitStatus(workspaceId: WorkspaceId, signal?: AbortSignal): Promise<WorkspaceGitStatus> {
     this.calls.push({ method: 'gitStatus', args: [workspaceId, signal] })
-    return await (this.stubs.get('gitStatus')?.(workspaceId, signal) as Promise<WorkspaceGitStatus> | undefined) ?? { branch: 'test', ahead: 0, behind: 0, files: [] }
+    return await (this.stubs.get('gitStatus')?.(workspaceId, signal) as Promise<WorkspaceGitStatus> | undefined) ?? { branch: 'test', ahead: 0, behind: 0, files: [], truncated: false }
   }
 
   async gitFileDiff(workspaceId: WorkspaceId, path: string, basis: 'staged' | 'worktree', signal?: AbortSignal): Promise<WorkspaceGitDiff> {

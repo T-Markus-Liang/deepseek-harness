@@ -43,8 +43,8 @@ export interface WorkspaceTreeLevel { path: string; entries: WorkspaceTreeEntry[
 export interface WorkspaceFilePreview { path: string; text: string; totalBytes: number; language?: string }
 /** One changed file: porcelain index/worktree letters plus the rename source when present. */
 export interface WorkspaceGitFile { path: string; index: string; worktree: string; originalPath?: string }
-/** Whole-worktree Git status: branch, ahead/behind counts, and every uncommitted file. */
-export interface WorkspaceGitStatus { branch?: string; ahead: number; behind: number; files: WorkspaceGitFile[] }
+/** Whole-worktree Git status: branch, ahead/behind counts, uncommitted files, and the truncation flag. */
+export interface WorkspaceGitStatus { branch?: string; ahead: number; behind: number; files: WorkspaceGitFile[]; truncated: boolean }
 /** One file's diff as old/new text (oldText null = added on that basis). */
 export interface WorkspaceGitDiff { path: string; basis: 'staged' | 'worktree'; oldText: string | null; newText: string }
 

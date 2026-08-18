@@ -198,7 +198,7 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
         return { rpcId: request.rpcId, result: { ok: true, value: { path: '', text: '', totalBytes: 0 } } }
       },
       async gitStatus(request) {
-        return { rpcId: request.rpcId, result: { ok: true, value: { branch: 'main', ahead: 0, behind: 0, files: [] } } }
+        return { rpcId: request.rpcId, result: { ok: true, value: { branch: 'main', ahead: 0, behind: 0, files: [], truncated: false } } }
       },
       async gitFileDiff(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { path: '', basis: 'worktree' as const, oldText: null, newText: '' } } }

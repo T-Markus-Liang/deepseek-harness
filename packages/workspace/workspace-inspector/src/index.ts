@@ -94,8 +94,17 @@ export class WorkspaceInspector extends Service {
    * @returns branch, ahead/behind counts, and every staged, unstaged, and untracked file.
    */
   async gitStatus(workspacePath: string, signal?: AbortSignal): Promise<WorkspaceGitStatus> {
-    const output = await this.git(workspacePath, ['status', '--porcelain=v1', '-z', '-b', '--untracked-files=all'], signal)
-    const records = output.split('\0')
+    const outcome = await this.gitResult(workspacePath, ['status', '--porcelain=v1', '-z', '-b', '--untracked-files=all'], signal, true)
+    this.assertGitSuccess(outcome)
+    let text = outcome.stdout
+    if (outcome.stdoutLossy) {
+      // A capped collection retains the tail and loses the head: everything up
+      // to the first NUL is the partial record the cut landed in, and the
+      // branch header (which leads the stream) is gone.
+      const boundary = text.indexOf('\0')
+      text = boundary < 0 ? '' : text.slice(boundary + 1)
+    }
+    const records = text.split('\0')
     let branch: string | undefined
     let ahead = 0
     let behind = 0
@@ -113,7 +122,9 @@ export class WorkspaceInspector extends Service {
         behind = Number(behindMatch?.[1] ?? 0)
         continue
       }
-      if (record.length < 4) continue
+      // Status records open with two porcelain letters and a space; the guard
+      // also drops a rename source orphaned by a lossy cut.
+      if (record.length < 4 || !/^[ MADRCU?!]{2} /.test(record)) continue
       const indexStatus = record.slice(0, 1)
       const worktree = record.slice(1, 2)
       const path = record.slice(3)
@@ -121,7 +132,7 @@ export class WorkspaceInspector extends Service {
       const originalPath = renamed ? records[++index] : undefined
       files.push({ path, index: indexStatus, worktree, ...(originalPath === undefined ? {} : { originalPath }) })
     }
-    return { ...(branch === undefined ? {} : { branch }), ahead, behind, files }
+    return { ...(branch === undefined ? {} : { branch }), ahead, behind, files, truncated: outcome.stdoutLossy }
   }
 
   /**
@@ -186,16 +197,16 @@ export class WorkspaceInspector extends Service {
     return result.stdout
   }
 
-  private async git(workspacePath: string, args: readonly string[], signal?: AbortSignal): Promise<string> {
-    const result = await this.gitResult(workspacePath, args, signal)
-    if (result.exitCode === 0) return result.stdout
+  private assertGitSuccess(result: { exitCode: number | null; stderr: string }): void {
+    if (result.exitCode === 0) return
     if (/not a git repository/i.test(result.stderr)) throw new WorkspaceInspectorError('git-not-repository', result.stderr.trim() || 'workspace is not a Git repository')
     throw new WorkspaceInspectorError('git-failed', result.stderr.trim() || 'Git command failed')
   }
 
+  // Text consumers corrupt on a cut payload, so only gitStatus opts into lossy output.
   private async gitResult(
-    workspacePath: string, args: readonly string[], signal?: AbortSignal,
-  ): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
+    workspacePath: string, args: readonly string[], signal?: AbortSignal, allowLossyStdout: boolean = false,
+  ): Promise<{ exitCode: number | null; stdout: string; stdoutLossy: boolean; stderr: string }> {
     let root: FsTarget
     try { root = await this.ctx.fs.resolve(workspacePath, signal === undefined ? {} : { signal }) } catch { throw new WorkspaceInspectorError('workspace-invalid', 'workspace root is unavailable') }
     let executable: string
@@ -208,7 +219,15 @@ export class WorkspaceInspector extends Service {
       env: { GIT_OPTIONAL_LOCKS: '0', GIT_PAGER: 'cat', PAGER: 'cat', GIT_TERMINAL_PROMPT: '0' },
     })
     const outcome = await handle.done
-    return { exitCode: outcome.exitCode, stdout: this.output(handle.collected.stdout), stderr: this.output(handle.collected.stderr) }
+    const stdout = this.outputRead(handle.collected.stdout)
+    if (stdout.lossy && !allowLossyStdout) throw new WorkspaceInspectorError('git-failed', 'Git output exceeded the configured limit')
+    return { exitCode: outcome.exitCode, stdout: stdout.text, stdoutLossy: stdout.lossy, stderr: this.output(handle.collected.stderr) }
+  }
+
+  private outputRead(reader: SubprocessOutputReader | undefined): { text: string; lossy: boolean } {
+    if (reader === undefined) throw new WorkspaceInspectorError('git-failed', 'Git output collection is unavailable')
+    const result = reader.readFrom(0)
+    return { text: result.text, lossy: result.lossy }
   }
 
   private output(reader: SubprocessOutputReader | undefined): string {

@@ -32,12 +32,14 @@ export interface WorkspaceGitFile {
   originalPath?: string
 }
 
-/** Whole-worktree Git status: branch, ahead/behind counts, and every uncommitted file. */
+/** Whole-worktree Git status: branch, ahead/behind counts, and uncommitted files. */
 export interface WorkspaceGitStatus {
   branch?: string
   ahead: number
   behind: number
   files: WorkspaceGitFile[]
+  /** True when the status output hit the byte cap: `files` holds only the complete records parsed before the cut. */
+  truncated: boolean
 }
 
 /** One file's diff as old/new text (oldText null = added on that basis). */

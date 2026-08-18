@@ -26,6 +26,6 @@ On the client, ui-workspace's browser gains a 会话 / 文件 / 变更 mode swit
 
 ## Consequences
 
-The sidebar switches between sessions, a workspace file tree, and the full uncommitted Git status without leaving the app; files and diffs open in the details column beside the conversation. Session logs, model context, tool permissions, and business execution are unchanged — the inspector answers reads only. The bounds (entry count, text bytes, Git output bytes) are compile-time constants, and preview requires a selected session because the workspace derives from it.
+The sidebar switches between sessions, a workspace file tree, and the full uncommitted Git status without leaving the app; files and diffs open in the details column beside the conversation. Session logs, model context, tool permissions, and business execution are unchanged — the inspector answers reads only. The bounds (entry count, text bytes, Git output bytes) are compile-time constants, and preview requires a selected session because the workspace derives from it. A status that exceeds the Git output cap returns the complete records retained under the cap with a `truncated` flag instead of failing; text bases still reject a cut payload.
 
 `pnpm run test:gui` passed 273 files and 3,786 tests. `pnpm run doc-sync` passed 28 gates. The shipped Web composition mounts `workspace-inspector` and `ui-workbench` through `packages/bundle/web-app/cordis.patch.yml`.
