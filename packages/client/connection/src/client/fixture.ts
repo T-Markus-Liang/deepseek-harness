@@ -2572,6 +2572,7 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
       listTreeLevel: request => ok(request, { path: request.payload.path ?? '', entries: [], truncated: false } satisfies WorkspaceTreeLevel),
       readFilePreview: request => ok(request, { path: request.payload.path, text: '', totalBytes: 0 } satisfies WorkspaceFilePreview),
       gitStatus: request => ok(request, { branch: 'fixture', ahead: 0, behind: 0, files: [], truncated: false } satisfies WorkspaceGitStatus),
+      deleteSession: request => ok(request, { sessionId: request.payload.sessionId }),
       gitFileDiff: request => ok(request, { path: request.payload.path, basis: request.payload.basis, oldText: null, newText: '' } satisfies WorkspaceGitDiff),
       create: (request) => {
         const { path } = request.payload
@@ -3110,6 +3111,7 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'workspace.insertBefore': return this.api.workspace.insertBefore(request)
       case 'workspace.insertSessionBefore': return this.api.workspace.insertSessionBefore(request)
       case 'workspace.archiveSession': return this.api.workspace.archiveSession(request)
+      case 'workspace.deleteSession': return this.api.workspace.deleteSession(request)
       case 'workspace.listTreeLevel': return this.api.workspace.listTreeLevel(request, signal)
       case 'workspace.readFilePreview': return this.api.workspace.readFilePreview(request, signal)
       case 'workspace.gitStatus': return this.api.workspace.gitStatus(request, signal)

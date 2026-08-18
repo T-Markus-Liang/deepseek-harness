@@ -259,6 +259,20 @@ insertBefore(id: WorkspaceId, beforeId?: WorkspaceId): Promise<readonly Workspac
 archiveSession(sessionId: SessionId): Promise<void>
 
 /**
+ * Remove a session from the registry-global archive set. Idempotent: an
+ * already absent id resolves without writing.
+ * @param sessionId - The session to remove from the archive set.
+ */
+removeArchivedSession(sessionId: SessionId): Promise<void>
+
+/**
+ * Remove a session from every workspace's accounting and from the archive
+ * set. Idempotent: an unknown session resolves without error.
+ * @param sessionId - The session to unaccount.
+ */
+unaccountSession(sessionId: SessionId): Promise<void>
+
+/**
  * Resolve by canonical directory path without creating or mutating a
  * workspace. A missing path rejects during `realpath`; an existing unowned
  * directory returns `undefined`.

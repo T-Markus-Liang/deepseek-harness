@@ -120,6 +120,17 @@ export interface WorkspaceApi {
   archiveSession(request: RpcRequest<{ sessionId: SessionId }>):
   Promise<RpcResponse<{ archivedSessionIds: SessionId[] }>>
 
+  /**
+   * Permanently delete a session and all its persisted artifacts. The session
+   * must not be live (no attached agent) — a live session fails with
+   * `session-live`. A subagent-origin session fails with `session-subagent`.
+   * A session not found in persistence fails with `session-not-found`.
+   * After deletion the session vanishes from every listing, grouping surface,
+   * and archive set. This operation is irreversible.
+   */
+  deleteSession(request: RpcRequest<{ sessionId: SessionId }>):
+  Promise<RpcResponse<{ sessionId: SessionId }>>
+
   listTreeLevel(
     request: RpcRequest<{ workspaceId: WorkspaceId; path?: string }>, signal: AbortSignal,
   ): Promise<RpcResponse<WorkspaceTreeLevel>>

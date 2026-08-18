@@ -337,6 +337,33 @@ export class SqliteSessionPersistence extends SessionPersistence implements Pers
     }
   }
 
+  /**
+   * Physically delete every persisted row of one stored session — its `events`
+   * rows and its `sessions` metadata row — in ONE transaction, so a mid-delete
+   * failure rolls back and leaves the session fully intact. Idempotent: an id
+   * with no stored rows resolves without error. After a destroy the same id
+   * materializes again (a fresh incarnation, revision at 0), matching the
+   * schema's deleted-then-recreated semantics; the store-global
+   * `persistence_state` row is never touched.
+   * @param id - persisted session id to destroy.
+   * @returns a promise that resolves once the session is durably deleted
+   *   (immediately when the id has no stored rows).
+   */
+  async destroy(id: SessionId): Promise<void> {
+    await this.ready
+    const deleteEvents = this.db.prepare('DELETE FROM events WHERE session_id = ?')
+    const deleteSession = this.db.prepare('DELETE FROM sessions WHERE id = ?')
+    this.db.exec('BEGIN')
+    try {
+      deleteEvents.run(id)
+      deleteSession.run(id)
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
   /** List all materialized sessions' metadata (every row is a materialized session). */
   async list(signal?: AbortSignal): Promise<SessionHeader[]> {
     signal?.throwIfAborted()

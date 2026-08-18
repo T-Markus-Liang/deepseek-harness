@@ -118,6 +118,11 @@ class TestPersistence extends SessionPersistence {
     return Promise.resolve()
   }
 
+  destroy(id: SessionIdType): Promise<void> {
+    TestPersistence.entries.delete(id)
+    return Promise.resolve()
+  }
+
   append(id: SessionIdType, events: readonly SessionEvent[]): Promise<void> {
     const entry = TestPersistence.entries.get(id)
     if (entry === undefined) return Promise.reject(new Error('missing test session'))

@@ -221,6 +221,15 @@ export abstract class SessionPersistence extends Service {
   Promise<{ meta: SessionHeader; events: SessionEvent[] }>
 
   /**
+   * Physically delete every durable artifact of one stored session. Idempotent:
+   * destroying an id with no stored artifact succeeds silently. The caller MUST
+   * guarantee the session is not active — the coordinator rejects destroying a
+   * live session or one still carrying in-memory persistence state.
+   * @param id - persisted session id to destroy.
+   */
+  abstract destroy(id: SessionId): Promise<void>
+
+  /**
    * Lightweight listing from metadata, without a full-log parse.
    * @param signal - optional cancellation for backend listing work.
    * @returns one header per materialized session.

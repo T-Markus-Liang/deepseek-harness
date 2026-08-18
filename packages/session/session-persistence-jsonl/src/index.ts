@@ -443,6 +443,20 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     if (repairedEvents.length > 0) await this.appendLines(meta, repairedEvents)
   }
 
+  /**
+   * Physically delete every artifact of one stored session: its whole session
+   * directory — covering both physical encodings, session-local files, and any
+   * leftover temp files — under whichever project directory holds the id.
+   * Idempotent: an id with no stored artifact resolves without error. The
+   * owning project directory and every other session are never touched.
+   * @param id - persisted session id to destroy.
+   */
+  async destroy(id: SessionId): Promise<void> {
+    const path = await this.findLog(id)
+    if (path === undefined) return
+    await rm(dirname(path), { recursive: true, force: true })
+  }
+
   /** List valid unique stored sessions' metadata (header line only — no full-log parse). */
   async list(signal?: AbortSignal): Promise<SessionHeader[]> {
     return (await this.listArtifacts(signal)).map(artifact => artifact.header)
