@@ -2961,11 +2961,29 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       async deleteSession(request) {
         const { sessionId } = request.payload
         if (ctx.sessions.get(sessionId) !== undefined) {
-          return err(request, {
-            code: 'session-live',
-            message: `session "${sessionId}" has a live agent`,
-            details: { sessionId },
-          })
+          // A live agent blocks a destructive delete; dispose it first so the
+          // conversation can be removed. Only agents this proxy owns have a
+          // retained handle (the same set session.stop can release); live
+          // agents without one keep the session-live guard.
+          const handle = agentHandles.get(sessionId)
+          if (handle !== undefined) {
+            try {
+              await handle.dispose()
+            } catch (error: unknown) {
+              return err(request, {
+                code: 'internal',
+                message: `failed to stop session "${sessionId}": ${String(error)}`,
+                details: { sessionId },
+              })
+            }
+          }
+          if (ctx.sessions.get(sessionId) !== undefined) {
+            return err(request, {
+              code: 'session-live',
+              message: `session "${sessionId}" has a live agent`,
+              details: { sessionId },
+            })
+          }
         }
         const persistence = ctx.get('sessionPersistence')
         if (persistence === undefined) {
@@ -2994,11 +3012,30 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       async moveSession(request) {
         const { workspaceId, sessionId } = request.payload
         if (ctx.sessions.get(sessionId) !== undefined) {
-          return err(request, {
-            code: 'session-live',
-            message: `session "${sessionId}" has a live agent`,
-            details: { sessionId },
-          })
+          // Relocating a live session first disposes its agent: the session's
+          // file operations and log writes are anchored to the old cwd, so
+          // the agent must be gone before the header is rewritten. Only
+          // proxy-owned agents have a retained handle; live agents without
+          // one keep the session-live guard.
+          const handle = agentHandles.get(sessionId)
+          if (handle !== undefined) {
+            try {
+              await handle.dispose()
+            } catch (error: unknown) {
+              return err(request, {
+                code: 'internal',
+                message: `failed to stop session "${sessionId}": ${String(error)}`,
+                details: { sessionId },
+              })
+            }
+          }
+          if (ctx.sessions.get(sessionId) !== undefined) {
+            return err(request, {
+              code: 'session-live',
+              message: `session "${sessionId}" has a live agent`,
+              details: { sessionId },
+            })
+          }
         }
         const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(workspaceId))
         if (workspace === undefined) return workspaceNotFound(request, workspaceId)
