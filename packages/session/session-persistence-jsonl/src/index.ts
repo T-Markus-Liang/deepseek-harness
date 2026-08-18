@@ -457,6 +457,62 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     await rm(dirname(path), { recursive: true, force: true })
   }
 
+  /**
+   * Move a session's durable artifact to the project directory derived from
+   * `newCwd`, rewriting the header `cwd` in-place. Reads the full log,
+   * swaps only the header line, and publishes at the new path via the same
+   * atomic mechanism as `materialize`, then removes the old artifact and
+   * its owning session directory. A crash between publish and cleanup leaves
+   * a duplicate that `listArtifacts` resolves by preferring the newer file.
+   * @param id - persisted session id to relocate.
+   * @param newCwd - absolute path of the new project directory.
+   */
+  async relocate(id: SessionId, newCwd: string): Promise<void> {
+    const raw = await this.readRaw(id)
+    if (raw === undefined) return
+    const oldPath = await this.findLog(id)
+    if (oldPath === undefined) return
+    const oldMeta = raw.meta
+    if (oldMeta.cwd === newCwd) return
+
+    const newMeta: SessionHeader = { ...oldMeta, cwd: newCwd }
+    const nlIndex = raw.content.indexOf('\n')
+    const eventsText = nlIndex === -1 ? '' : raw.content.slice(nlIndex + 1)
+    const headerLine = JSON.stringify(toHeaderLine(newMeta)) + '\n'
+
+    let content: Buffer | string
+    if (this.compression === 'zstd') {
+      const headerFrame = await compressZstdFrame(headerLine)
+      const eventFrame = await compressZstdFrame(eventsText)
+      content = Buffer.concat([headerFrame, eventFrame])
+    } else {
+      content = headerLine + eventsText
+    }
+
+    const newProject = projectDir(this.root, newCwd)
+    const newDir = sessionDir(this.root, newCwd, id)
+    const newPath = logPath(this.root, newCwd, id, this.compression)
+    /* v8 ignore next -- native Windows coverage exercises this platform dispatch; Linux covers the POSIX peer */
+    if (process.platform === 'win32') {
+      await this.materializeWin32(newProject, newDir, newPath, id, content)
+    } else {
+      await this.materializePosix(newProject, newDir, newPath, id, content)
+    }
+
+    // New artifact is durable — remove the old one. A crash here leaves a
+    // duplicate that listArtifacts resolves by preferring the newer file.
+    await rm(dirname(oldPath), { recursive: true, force: true })
+
+    // Best-effort cleanup of the old project directory when it becomes empty.
+    const oldProject = projectDir(this.root, oldMeta.cwd)
+    try {
+      const remaining = await readdir(oldProject)
+      if (remaining.length === 0) await rm(oldProject, { recursive: true, force: true })
+    } catch {
+      /* old project dir already gone or not empty — nothing to clean */
+    }
+  }
+
   /** List valid unique stored sessions' metadata (header line only — no full-log parse). */
   async list(signal?: AbortSignal): Promise<SessionHeader[]> {
     return (await this.listArtifacts(signal)).map(artifact => artifact.header)
@@ -512,7 +568,23 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
         await this.assertStoredIdentity(path, meta, undefined, signal)
         signal?.throwIfAborted()
         if (ids.has(meta.id)) {
-          throw new Error(`duplicate JSONL session id "${meta.id}" appears in multiple project directories`)
+          // Relocation crash recovery: a duplicate arises when relocate
+          // published the new artifact but crashed before removing the old
+          // one. Prefer the newer file (the relocated copy was written most
+          // recently); a genuine duplicate also resolves to the newer file,
+          // which is the safer default.
+          const existing = artifacts.find(a => a.header.id === meta.id)
+          if (existing === undefined) continue
+          const [existingStat, currentStat] = await Promise.all([
+            stat(existing.path, { bigint: true }),
+            stat(path, { bigint: true }),
+          ])
+          signal?.throwIfAborted()
+          if (currentStat.mtimeMs > existingStat.mtimeMs) {
+            artifacts.splice(artifacts.indexOf(existing), 1)
+          } else {
+            continue
+          }
         }
         ids.add(meta.id)
         artifacts.push({ header: meta, path })
@@ -802,7 +874,16 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
       if (pathExists) matches.push(path)
     }
     if (matches.length > 1) {
-      throw new Error(`duplicate JSONL session id "${id}" appears in multiple project directories`)
+      // Relocation crash recovery: prefer the newer file (the relocated copy
+      // was written most recently); a genuine duplicate also resolves to the
+      // newer file, which is the safer default.
+      const stats = await Promise.all(matches.map(path => stat(path, { bigint: true })))
+      signal?.throwIfAborted()
+      let newest = 0
+      for (let i = 1; i < stats.length; i++) {
+        if ((stats[i]?.mtimeMs ?? 0) > (stats[newest]?.mtimeMs ?? 0)) newest = i
+      }
+      return matches[newest] ?? matches[0]
     }
     signal?.throwIfAborted()
     return matches[0]

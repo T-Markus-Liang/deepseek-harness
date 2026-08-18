@@ -51,6 +51,7 @@ export interface RpcMethodMap {
   'workspace.insertSessionBefore': WorkspaceApi['insertSessionBefore']
   'workspace.archiveSession': WorkspaceApi['archiveSession']
   'workspace.deleteSession': WorkspaceApi['deleteSession']
+  'workspace.moveSession': WorkspaceApi['moveSession']
   'workspace.listTreeLevel': WorkspaceApi['listTreeLevel']
   'workspace.readFilePreview': WorkspaceApi['readFilePreview']
   'workspace.gitStatus': WorkspaceApi['gitStatus']

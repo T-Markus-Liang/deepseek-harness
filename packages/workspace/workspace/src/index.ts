@@ -292,6 +292,37 @@ export class WorkspaceRegistry extends Service {
   }
 
   /**
+   * Relocate a session to a different workspace: rewrite the persisted
+   * header `cwd` to the target workspace's path, update the in-memory
+   * path mapping, detach from every workspace, and attach to the target.
+   * The session must not be live — the persistence coordinator rejects
+   * relocating a live session.
+   * @param sessionId - The session to move.
+   * @param targetWorkspaceId - The workspace to move the session into.
+   */
+  moveSession(sessionId: SessionId, targetWorkspaceId: WorkspaceId): Promise<void> {
+    return this.enqueueOperation(async () => {
+      const target = this.entities.get(targetWorkspaceId)
+      if (target === undefined) {
+        throw new Error(`workspace '${targetWorkspaceId}' not found`)
+      }
+      await this.ctx.sessionPersistence.relocate(sessionId, target.path)
+      // Sync the in-memory caches with the relocated header before attach
+      // validates cwd against the target path.
+      const oldHeader = this.headers.get(sessionId)
+      if (oldHeader !== undefined) {
+        this.headers.set(sessionId, { ...oldHeader, cwd: target.path })
+      }
+      this.sessionPaths.set(sessionId, target.path)
+      this.invalidSessionPaths.delete(sessionId)
+      for (const entity of this.entities.values()) {
+        await entity.detachSession(sessionId)
+      }
+      await target.attachSession(sessionId)
+    })
+  }
+
+  /**
    * Whether a session is live, header-indexed, or present in a fresh
    * persistence listing. Only a definite miss returns false — a failing
    * `sessionPersistence.list()` propagates so storage faults never

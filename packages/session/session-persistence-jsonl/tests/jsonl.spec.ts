@@ -1347,8 +1347,12 @@ describe('JsonlSessionPersistence: edge cases', () => {
       await writeFile(rawLogPath(root, cwd, id), content)
     }
 
-    await expect(ctx.sessionPersistence.load(id)).rejects.toThrow(/appears in multiple project directories/)
-    await expect(ctx.sessionPersistence.list()).rejects.toThrow(/appears in multiple project directories/)
+    // Duplicate recovery prefers the newer file (relocation crash path);
+    // a genuine duplicate also resolves to the newer file.
+    const loaded = await ctx.sessionPersistence.load(id)
+    expect(loaded).toBeDefined()
+    const listed = await ctx.sessionPersistence.list()
+    expect(listed.filter(header => header.id === id)).toHaveLength(1)
   })
 
   it('a DIFFERENT live session object reusing a disposed id gets its own init (no stale cache)', async () => {

@@ -131,6 +131,19 @@ export interface WorkspaceApi {
   deleteSession(request: RpcRequest<{ sessionId: SessionId }>):
   Promise<RpcResponse<{ sessionId: SessionId }>>
 
+  /**
+   * Relocate a session to a different workspace: rewrite the persisted
+   * header `cwd` to the target workspace's path, update the in-memory
+   * path mapping, detach from every workspace, and attach to the target.
+   * The session must not be live — a live session fails with `session-live`.
+   * A subagent-origin session fails with `session-subagent`.
+   * A session not found in persistence fails with `session-not-found`.
+   * The target workspace must exist — an unknown workspace fails with
+   * `workspace-not-found`.
+   */
+  moveSession(request: RpcRequest<{ workspaceId: WorkspaceId; sessionId: SessionId }>):
+  Promise<RpcResponse<{ sessionId: SessionId; workspaceId: WorkspaceId }>>
+
   listTreeLevel(
     request: RpcRequest<{ workspaceId: WorkspaceId; path?: string }>, signal: AbortSignal,
   ): Promise<RpcResponse<WorkspaceTreeLevel>>

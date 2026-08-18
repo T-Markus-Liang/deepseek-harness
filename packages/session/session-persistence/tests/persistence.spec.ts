@@ -122,6 +122,10 @@ class MemoryPersistence extends SessionPersistence implements PersistenceBackend
     return this.coordinator.destroy(id)
   }
 
+  relocate(id: SessionId, newCwd: string): Promise<void> {
+    return this.coordinator.relocate(id, newCwd)
+  }
+
   // --- PersistenceBackend hooks (the Map storage primitives) ---
 
   // A Map-backed store has no torn tails, so `tornMarker` is never set.
@@ -234,6 +238,11 @@ class ControlledBackend implements PersistenceBackend<never> {
 
   async destroy(id: SessionId): Promise<void> {
     this.store.delete(id)
+  }
+
+  async relocate(id: SessionId, newCwd: string): Promise<void> {
+    const entry = this.store.get(id)
+    if (entry !== undefined) entry.meta = { ...entry.meta, cwd: newCwd }
   }
 
   async list(): Promise<SessionHeader[]> {

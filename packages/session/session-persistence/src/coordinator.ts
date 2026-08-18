@@ -200,6 +200,15 @@ export interface PersistenceBackend<TornMarker = unknown> {
   destroy(id: SessionId): Promise<void>
 
   /**
+   * Relocate a stored session to a new project directory by rewriting its
+   * header `cwd` and moving the durable artifact to the path derived from
+   * `newCwd`. Idempotent: an id with no stored artifact resolves silently.
+   * @param id - persisted session id to relocate.
+   * @param newCwd - absolute path of the new project directory.
+   */
+  relocate(id: SessionId, newCwd: string): Promise<void>
+
+  /**
    * List all stored (materialized) sessions' metadata.
    * @param signal - optional cancellation for backend listing work.
    */
@@ -685,6 +694,34 @@ export class PersistenceCoordinator<TornMarker = unknown> {
   /** Delete durable artifacts and every in-memory trace of one session. */
   private async destroyCore(id: SessionId): Promise<void> {
     await this.backend.destroy(id)
+    this.states.delete(id)
+    this.retirements.delete(id)
+    this.preparations.invalidate(id)
+  }
+
+  /**
+   * Relocate a stored session to a new project directory by rewriting its
+   * header `cwd` and moving the durable artifact to the path derived from
+   * `newCwd`. Idempotent: an id with neither an artifact nor tracked state
+   * relocates to a silent success. Rejects while the id is live or carries
+   * in-memory persistence state — a live session keeps writing to its id and
+   * a tracked state owns a cursor the backend no longer matches.
+   * @param id - persisted session id to relocate.
+   * @param newCwd - absolute path of the new project directory.
+   */
+  relocate(id: SessionId, newCwd: string): Promise<void> {
+    if (this.ctx.sessions.get(id) !== undefined) {
+      return Promise.reject(new Error(`cannot relocate session "${id}" while it is live`))
+    }
+    if (this.states.has(id) || this.retirements.has(id) || this.preparations.has(id)) {
+      return Promise.reject(new Error(`cannot relocate session "${id}" while it has in-memory persistence state`))
+    }
+    return this.serialize(id, () => this.relocateCore(id, newCwd))
+  }
+
+  /** Move durable artifacts to the new project directory and reset in-memory traces. */
+  private async relocateCore(id: SessionId, newCwd: string): Promise<void> {
+    await this.backend.relocate(id, newCwd)
     this.states.delete(id)
     this.retirements.delete(id)
     this.preparations.invalidate(id)

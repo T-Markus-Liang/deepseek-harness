@@ -2933,6 +2933,48 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         await ctx.workspaceRegistry.unaccountSession(sessionId)
         return ok(request, { sessionId })
       },
+
+      async moveSession(request) {
+        const { workspaceId, sessionId } = request.payload
+        if (ctx.sessions.get(sessionId) !== undefined) {
+          return err(request, {
+            code: 'session-live',
+            message: `session "${sessionId}" has a live agent`,
+            details: { sessionId },
+          })
+        }
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(workspaceId))
+        if (workspace === undefined) return workspaceNotFound(request, workspaceId)
+        const persistence = ctx.get('sessionPersistence')
+        if (persistence === undefined) {
+          return err(request, { code: 'internal', message: 'session persistence is unavailable', details: {} })
+        }
+        const header = (await persistence.list()).find(stored => stored.id === sessionId)
+        if (header === undefined) {
+          return err(request, {
+            code: 'session-not-found',
+            message: `session "${sessionId}" is not in persistence`,
+            details: { sessionId },
+          })
+        }
+        if (header.origin === 'subagent') {
+          return err(request, {
+            code: 'session-subagent',
+            message: `session "${sessionId}" belongs to a subagent`,
+            details: { sessionId },
+          })
+        }
+        try {
+          await ctx.workspaceRegistry.moveSession(sessionId, brandWorkspaceId(workspaceId))
+        } catch (error: unknown) {
+          return err(request, {
+            code: 'internal',
+            message: `failed to move session "${sessionId}": ${String(error)}`,
+            details: {},
+          })
+        }
+        return ok(request, { sessionId, workspaceId })
+      },
     },
 
     host: {

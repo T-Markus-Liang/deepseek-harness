@@ -204,6 +204,9 @@ export class FakeApiClient implements IApiClient {
   onWorkspaceArchiveSession: (payload: unknown) => Promise<RpcResponse<{ archivedSessionIds: SessionId[] }>> =
     payload => Promise.resolve(ok({ archivedSessionIds: [(payload as { sessionId: SessionId }).sessionId] }))
 
+  onWorkspaceDeleteSession: (payload: unknown) => Promise<RpcResponse<{ sessionId: SessionId }>> =
+    payload => Promise.resolve(ok({ sessionId: (payload as { sessionId: SessionId }).sessionId }))
+
   readonly workspace: IApiClient['workspace'] = {
     list: (payload: unknown) => this.record('workspace.list', payload, this.onWorkspaceList(payload).then(response => (
       response.result.ok
@@ -219,7 +222,10 @@ export class FakeApiClient implements IApiClient {
       this.record('workspace.insertSessionBefore', payload, this.onWorkspaceInsertSessionBefore(payload)),
     archiveSession: (payload: unknown) =>
       this.record('workspace.archiveSession', payload, this.onWorkspaceArchiveSession(payload)),
-    deleteSession: (payload: unknown) => this.record('workspace.deleteSession', payload, Promise.resolve(ok({ sessionId: (payload as { sessionId: SessionId }).sessionId }))),
+    deleteSession: (payload: unknown) =>
+      this.record('workspace.deleteSession', payload, this.onWorkspaceDeleteSession(payload)),
+    moveSession: (payload: unknown) =>
+      this.record('workspace.moveSession', payload, Promise.resolve(ok({ sessionId: (payload as { sessionId: SessionId; workspaceId: WorkspaceId }).sessionId, workspaceId: (payload as { sessionId: SessionId; workspaceId: WorkspaceId }).workspaceId }))),
     listTreeLevel: (payload: unknown) => this.record('workspace.listTreeLevel', payload, Promise.resolve(ok({ path: '', entries: [], truncated: false }))),
     readFilePreview: (payload: unknown) => this.record('workspace.readFilePreview', payload, Promise.resolve(ok({ path: '', text: '', totalBytes: 0 }))),
     gitStatus: (payload: unknown) => this.record('workspace.gitStatus', payload, Promise.resolve(ok({ branch: 'fake', ahead: 0, behind: 0, files: [], truncated: false }))),

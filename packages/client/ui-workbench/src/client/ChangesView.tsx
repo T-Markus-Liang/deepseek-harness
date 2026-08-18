@@ -82,7 +82,7 @@ export function ChangesView({ useSessions, useWorkspaces, gitStatus, openPreview
             className={css.row}
             title={file.originalPath === undefined ? file.path : file.originalPath + ' → ' + file.path}
             onClick={() => {
-              if (workspaceId !== undefined) openPreview({ kind: 'git-diff', workspaceId, path: file.path, basis: group.basis })
+              openPreview({ kind: 'git-diff', workspaceId, path: file.path, basis: group.basis })
             }}
           >
             <span className={clsx(css.statusLetter, group.key === 'staged' && css.statusStaged, group.key === 'untracked' && css.statusUntracked)}>
@@ -107,7 +107,7 @@ export function ChangesView({ useSessions, useWorkspaces, gitStatus, openPreview
           {branch !== undefined && <span className={css.branchBadge}>{branch}</span>}
           {(ahead > 0 || behind > 0) && (
             <span className={css.syncBadge}>
-              {ahead > 0 ? '↑' + ahead : ''}{behind > 0 ? '↓' + behind : ''}
+              {ahead > 0 ? `↑${ahead}` : ''}{behind > 0 ? `↓${behind}` : ''}
             </span>
           )}
         </span>

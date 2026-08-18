@@ -37,6 +37,7 @@ import {
 import {
   workspaceArchiveSessionRequestSchema,
   workspaceDeleteSessionRequestSchema,
+  workspaceMoveSessionRequestSchema,
   workspaceCreateRequestSchema,
   workspaceDeleteRequestSchema,
   workspaceInsertBeforeRequestSchema,
@@ -120,6 +121,7 @@ const UNARY_ROUTES: UnaryRoutes = {
   'workspace.insertSessionBefore': { schema: workspaceInsertSessionBeforeRequestSchema, invoke: (api, r) => api.workspace.insertSessionBefore(r) },
   'workspace.archiveSession': { schema: workspaceArchiveSessionRequestSchema, invoke: (api, r) => api.workspace.archiveSession(r) },
   'workspace.deleteSession': { schema: workspaceDeleteSessionRequestSchema, invoke: (api, r) => api.workspace.deleteSession(r) },
+  'workspace.moveSession': { schema: workspaceMoveSessionRequestSchema, invoke: (api, r) => api.workspace.moveSession(r) },
   'workspace.listTreeLevel': { schema: workspaceListTreeLevelRequestSchema, invoke: (api, r, signal) => api.workspace.listTreeLevel(r, signal) },
   'workspace.readFilePreview': { schema: workspaceReadFilePreviewRequestSchema, invoke: (api, r, signal) => api.workspace.readFilePreview(r, signal) },
   'workspace.gitStatus': { schema: workspaceGitStatusRequestSchema, invoke: (api, r, signal) => api.workspace.gitStatus(r, signal) },

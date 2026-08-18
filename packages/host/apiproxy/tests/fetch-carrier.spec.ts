@@ -194,6 +194,12 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       async deleteSession(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { sessionId: request.payload.sessionId } } }
       },
+      async moveSession(request) {
+        return {
+          rpcId: request.rpcId,
+          result: { ok: true, value: { sessionId: request.payload.sessionId, workspaceId: request.payload.workspaceId } },
+        }
+      },
       async listTreeLevel(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { path: '', entries: [], truncated: false } } }
       },

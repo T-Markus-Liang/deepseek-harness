@@ -364,6 +364,19 @@ export class SqliteSessionPersistence extends SessionPersistence implements Pers
     }
   }
 
+  /**
+   * Update a stored session's `cwd` to `newCwd`. The sessions row carries
+   * the path as a plain column, so the update is a single statement inside
+   * the same transaction discipline as every other write. Idempotent: an id
+   * with no stored row resolves without error.
+   * @param id - persisted session id to relocate.
+   * @param newCwd - absolute path of the new project directory.
+   */
+  async relocate(id: SessionId, newCwd: string): Promise<void> {
+    await this.ready
+    this.db.prepare('UPDATE sessions SET cwd = ?, revision = revision + 1 WHERE id = ?').run(newCwd, id)
+  }
+
   /** List all materialized sessions' metadata (every row is a materialized session). */
   async list(signal?: AbortSignal): Promise<SessionHeader[]> {
     signal?.throwIfAborted()
