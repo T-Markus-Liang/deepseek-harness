@@ -1,0 +1,4 @@
+interface:
+  display_name: "DSH 跨工作区会话迁移"
+  short_description: "Migrate conversations between workspaces (workspace.moveSession)"
+  default_prompt: "Use $dsh-migrate-workspace-sessions to migrate sessions between workspaces."
