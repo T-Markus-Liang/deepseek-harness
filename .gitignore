@@ -38,3 +38,8 @@ apps/web/dist/
 worktrees/
 .agents/worktrees/
 .typert-*/
+# 斗地主 TTS 语音缓存
+apps/web/public/tts_cache/
+apps/web/public/tts_cosy/
+apps/web/public/tts_cosy_it/
+apps/web/public/tts_preview/

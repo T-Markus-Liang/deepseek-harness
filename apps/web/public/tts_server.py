@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 import tempfile
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
 import urllib.parse
 
 try:
@@ -18,20 +18,30 @@ except ImportError:
     exit(1)
 
 VOICES = {
-    'xiaoxiao': 'zh-CN-XiaoxiaoNeural',
-    'yunxi': 'zh-CN-YunxiNeural',
-    'yunyang': 'zh-CN-YunyangNeural',
-    'xiaoyi': 'zh-CN-XiaoyiNeural',
-    'yunye': 'zh-CN-YunyeNeural',
-    'xiaochen': 'zh-CN-XiaochenNeural',
-    'xiaohan': 'zh-CN-XiaohanNeural',
-    'xiaomeng': 'zh-CN-XiaomengNeural',
+    # 普通话
+    'xiaoxiao': 'zh-CN-XiaoxiaoNeural',   # 晓晓 女 亲切温柔
+    'xiaoyi': 'zh-CN-XiaoyiNeural',       # 晓伊 女 情感丰富
+    'yunjian': 'zh-CN-YunjianNeural',     # 云健 男 沉稳
+    'yunxi': 'zh-CN-YunxiNeural',         # 云希 男 阳光少年
+    'yunxia': 'zh-CN-YunxiaNeural',       # 云夏 男 少年
+    'yunyang': 'zh-CN-YunyangNeural',     # 云扬 男 播音
+    # 方言
+    'dongbei': 'zh-CN-liaoning-XiaobeiNeural',  # 东北方言 女 晓北
+    'shaanxi': 'zh-CN-shaanxi-XiaoniNeural',    # 陕西方言 女 晓妮
+    # 粤语
+    'yue_m': 'zh-HK-WanLungNeural',       # 粤语 男 云龙
+    'yue_f1': 'zh-HK-HiuGaaiNeural',      # 粤语 女 晓佳
+    'yue_f2': 'zh-HK-HiuMaanNeural',      # 粤语 女 晓曼
+    # 台湾国语
+    'tw_f1': 'zh-TW-HsiaoChenNeural',
+    'tw_f2': 'zh-TW-HsiaoYuNeural',
+    'tw_m': 'zh-TW-YunJheNeural',
 }
 
 ROLE_VOICES = {
-    '小呆': 'yunxi',
-    '老胡': 'yunyang',
-    '你': 'xiaoxiao',
+    '小呆': 'dongbei',   # 东北方言（年轻活泼）
+    '老胡': 'shaanxi',   # 陕西方言（沉稳老练）
+    '你': 'xiaoxiao',    # 普通话（亲切女声）
 }
 
 PORT = 3098
@@ -129,7 +139,8 @@ class TTSHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    server = HTTPServer(('127.0.0.1', PORT), TTSHandler)
+    # 多线程服务器：单个请求异常不会拖垮整个服务
+    server = ThreadingHTTPServer(('127.0.0.1', PORT), TTSHandler)
     print(f"[TTS Server] Running on http://127.0.0.1:{PORT}")
     print(f"[TTS Server] Cache dir: {CACHE_DIR}")
     try:
