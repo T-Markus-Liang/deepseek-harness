@@ -54,10 +54,16 @@ curl -s -X POST http://127.0.0.1:3080/api/session.list -H 'content-type: applica
 | `running: false` 但 moveSession 仍报 `session-live` | agent 已加载但空闲 → 不可迁移 |
 | 不在 `session.list` | 已持久化、未加载 → 可迁移（最干净） |
 
-**释放 live 会话的唯一方式（无 `session.stop` RPC）：**
+**释放 live 会话（推荐用 `session.stop`，feature commit `baccf278` 之后加入）：**
 
-- **结束对话**：会话停止后 agent 被释放。当前正在运行的对话（正在执行迁移的会话自己）无法在运行期间迁移，需等其结束。
-- **重启服务**：`com.deepseek.dsh-web` 的 launchd plist 有 `KeepAlive: true`，杀掉会自动重启。重启后**所有**会话变为非 live，全部可迁移。这是批量迁移剩余会话的最快路径。重启会中断当前对话的回合（会话持久化，可恢复）。
+```sh
+curl -s -X POST http://127.0.0.1:3080/api/session.stop -H 'content-type: application/json' \
+  -d '{"type":"client-request","rpcId":"st","method":"session.stop","payload":{"sessionId":"<SESSION>"}}'
+```
+
+- `session.stop` 对空闲 live 会话返回 `{ "stopped": true }`：agent 被彻底释放（停循环、注销、从 store 移除），随后即可 `workspace.moveSession`。它也会中止正在跑的回合，所以**不要对当前正在运行的对话调它**。
+- 若返回 `session-not-found`：会话本就未加载，直接可迁移。
+- 无 `session.stop` 的旧版服务（或停止不了自身时）回退到：**结束对话**（会话停止后 agent 被释放，当前正在运行的对话需等其结束），或**重启服务**（`com.deepseek.dsh-web` 的 launchd plist 有 `KeepAlive: true`，杀掉会自动重启；重启后所有会话变为非 live）。重启会中断当前对话的回合（会话持久化，可恢复）。
 
 ### 3. 逐一迁移
 
@@ -116,7 +122,7 @@ The user reorganizes their projects (moving a repo to a dedicated directory) and
 
 ### Live-session constraint
 
-A session with a loaded agent (running or idle) fails with `session-live` by design. There is no `session.stop` RPC yet. To release sessions: end the conversation, or restart the service (`launchctl kickstart -k gui/$(id -u)/com.deepseek.dsh-web`; plist `KeepAlive: true` auto-restarts). After a restart every session is non-live and migratable. The currently running conversation cannot migrate itself mid-turn.
+A session with a loaded agent (running or idle) fails with `session-live` by design. Release it first with `session.stop` (a `POST /api/session.stop` with `{ "sessionId" }`; the proxy disposes the AgentHandle it retained at create/resume — loop stopped, agent unregistered, session removed from the store). `session.stop` also aborts a running turn, so never call it on the currently running conversation. A `session-not-found` reply means the session was never loaded and is already migratable. On a server without `session.stop`: end the conversation, or restart the service (`launchctl kickstart -k gui/$(id -u)/com.deepseek.dsh-web`; plist `KeepAlive: true` auto-restarts); after a restart every session is non-live and migratable. The currently running conversation cannot migrate itself mid-turn.
 
 ### Workflow
 
@@ -132,5 +138,5 @@ A session with a loaded agent (running or idle) fails with `session-live` by des
 
 ### Related
 
-- Agent Note: `.agents/notes/implemented/feature/2026-08-18-session-move-workspace.md`
+- Agent Note: `.agents/notes/implemented/feature/2026-08-18-session-move-workspace.md` (moveSession), `.agents/notes/implemented/feature/2026-08-18-session-stop-rpc.md` (session.stop)
 - Persistence backend: `packages/session/session-persistence-jsonl` (`relocate`, duplicate recovery in `listArtifacts`/`findLog`)

@@ -1248,6 +1248,9 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     agentOptions,
     setup: async ({ meta, events }) =>
       (await composeAgent(resolveSessionPreset({ header: meta, events }))).setup,
+    // The resolver's cold resumes also produce live agents this proxy owns;
+    // route their handles into the same map `session.stop` reads.
+    onHandle: (sessionId, handle) => { agentHandles.set(sessionId, handle) },
   })
 
   /** Send one transient frame to every connected mux consumer. */
@@ -2378,7 +2381,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         // plane, composing nothing would leave the child with no tools at all.
         const forkComposition = await composeAgent(resolveSessionPreset(source))
         try {
-          await ctx.agents.create({
+          const forked = await ctx.agents.create({
             sessionId: childId,
             seed: events.slice(0, cut),
             meta: {
@@ -2392,6 +2395,9 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             agentOptions: agentOptions(),
             setup: forkComposition.setup,
           })
+          // Same handle retention as ensureSession: the forked child is a live
+          // agent this proxy owns, so `session.stop` must be able to release it.
+          agentHandles.set(childId, forked)
         } catch (error: unknown) {
           return err(request, {
             code: 'internal',
