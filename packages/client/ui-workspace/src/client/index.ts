@@ -110,7 +110,11 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register(
     {
       name: 'sidebar.workspaces',
-      children: { 'sidebar.workspaces.directoryFlow': { kind: 'single', scope: 'root' } },
+      children: {
+        'sidebar.workspaces.directoryFlow': { kind: 'single', scope: 'root' },
+        'sidebar.workspaces.files': { kind: 'single', scope: 'root' },
+        'sidebar.workspaces.changes': { kind: 'single', scope: 'root' },
+      },
       store: createWorkspaceViewStore(),
       inject: browserInjected,
       locale: NS,

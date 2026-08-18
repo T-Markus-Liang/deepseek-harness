@@ -725,7 +725,7 @@ Source: [`packages/hooks/hooks-codex/src/index.ts:44`](../packages/hooks/hooks-c
 
 ## `@deepseek-ai/dsh-host-apiproxy`
 
-Requires: `agentDefaultModel` · `agents` · `attachments` · `directoryPicker` · `llm` · `sessions` · `subagents` · `sessionQuery` · `tools` · `userQuestions` · `workspaceRegistry`
+Requires: `agentDefaultModel` · `agents` · `attachments` · `directoryPicker` · `llm` · `sessions` · `subagents` · `sessionQuery` · `tools` · `userQuestions` · `workspaceRegistry` · `workspaceInspector`
 
 ```ts config-catalog
 /** Gateway plugin configuration. */
@@ -753,7 +753,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/host/apiproxy/src/index.ts:41`](../packages/host/apiproxy/src/index.ts)
+Source: [`packages/host/apiproxy/src/index.ts:42`](../packages/host/apiproxy/src/index.ts)
 
 <a id="deepseek-aidsh-host-directory-picker-browse"></a>
 
@@ -3078,6 +3078,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-client-ui-tool` ([`packages/client/ui-tool/src/index.ts`](../packages/client/ui-tool/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-trajectory` ([`packages/client/ui-trajectory/src/index.ts`](../packages/client/ui-trajectory/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-user-questions` ([`packages/client/ui-user-questions/src/index.ts`](../packages/client/ui-user-questions/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-workbench` ([`packages/client/ui-workbench/src/index.ts`](../packages/client/ui-workbench/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-workflow-run` ([`packages/client/ui-workflow-run/src/index.ts`](../packages/client/ui-workflow-run/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-workspace` ([`packages/client/ui-workspace/src/index.ts`](../packages/client/ui-workspace/src/index.ts))
 - `@deepseek-ai/dsh-command-compact` — requires `commands` · `compaction` ([`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts))
@@ -3109,6 +3110,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-tool-subagent-control` — requires `tools` · `subagents` ([`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts))
 - `@deepseek-ai/dsh-user-questions` ([`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts))
 - `@deepseek-ai/dsh-workspace` — requires `storageDomain` · `sessionPersistence` ([`packages/workspace/workspace/src/index.ts`](../packages/workspace/workspace/src/index.ts))
+- `@deepseek-ai/dsh-workspace-inspector` — requires `fs` · `subprocess` ([`packages/workspace/workspace-inspector/src/index.ts`](../packages/workspace/workspace-inspector/src/index.ts))
 
 ## Seam packages (not directly loadable)
 

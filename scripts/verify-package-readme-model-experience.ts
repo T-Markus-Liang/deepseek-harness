@@ -86,6 +86,8 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/client/ui-user-questions': { kind: 'indirect', reason: 'The package mounts dsh-tool-ask-user; that tool owns the model-visible schema and answer rendering.' },
   'packages/client/ui-trajectory': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-workspace': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
+  'packages/client/ui-workbench': { kind: 'none', reason: 'Browser-side read-only workspace inspection surface; registers nothing model-facing.' },
+  'packages/workspace/workspace-inspector': { kind: 'none', reason: 'Host read-only inspection service consumed by the browser workbench; registers nothing model-facing.' },
   'packages/client/ui-directory-picker-browse': { kind: 'none', reason: 'Browser-side directory-browsing surface; registers nothing model-facing.' },
   'packages/client/ui-directory-picker-native': { kind: 'none', reason: 'Browser-side surface driving the host OS chooser; registers nothing model-facing.' },
   'packages/client/ui-theme': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },

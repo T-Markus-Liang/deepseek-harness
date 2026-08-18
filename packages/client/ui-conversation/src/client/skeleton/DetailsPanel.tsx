@@ -63,7 +63,7 @@ function rawResultText(block: ToolCallBlock): string {
   return parts.join('\n')
 }
 
-export function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, t }: DetailsPanelProps) {
+export function DetailsPanel({ useSession, useSessions, sessionId, useStore, renderSlot, closeDetails, preview, t }: DetailsPanelProps) {
   const selection = useStore(s => s.selection)
   // Session workspace root: an omitted or relative terminal cwd resolves
   // against it, which the pure presenter cannot see.
@@ -74,6 +74,17 @@ export function DetailsPanel({ useSession, useSessions, sessionId, useStore, ren
   const material = useSession(
     s => (callId === undefined ? null : materialFor(s, callId)),
     (a, b) => shallowEqual(a, b))
+
+  // A workbench preview replaces the tool-details content wholesale: one
+  // details column, one occupant kind at a time (the layout store decides).
+  // Hooks above stay unconditional across the switch.
+  if (preview !== null && preview !== undefined) {
+    return (
+      <div className={css.root}>
+        {renderSlot('conversation.details.workspacePreview', { target: preview })}
+      </div>
+    )
+  }
 
   return (
     <div className={css.root}>

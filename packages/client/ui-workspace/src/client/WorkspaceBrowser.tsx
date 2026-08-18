@@ -767,6 +767,7 @@ export function WorkspaceBrowser({
   // Live occupancy of this surface's directory-flow hole (the same source the
   // flow reads): a composition without a picking affordance can add nothing.
   const directoryFlowAvailable = useDirectoryFlow(occupied => occupied)
+  const mode = useStore(s => s.mode)
   const groupBy = useStore(s => s.groupBy)
   const orderBy = useStore(s => s.orderBy)
   const groupExpansion = useStore(s => s.groupExpansion)
@@ -1085,6 +1086,25 @@ export function WorkspaceBrowser({
         />
       </div>
 
+      {/* Region mode switch: session browser or a read-only workspace
+          workbench view (declared child seats, occupied by ui-workbench). */}
+      {wide && (
+        <div className={css.modeTabs} role="tablist" aria-label={t('section.workspaces')}>
+          {(['sessions', 'files', 'changes'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={mode === tab}
+              className={clsx(css.modeTab, mode === tab && css.modeTabActive)}
+              onClick={() => { actions.setMode(tab) }}
+            >
+              {t(tab === 'sessions' ? 'mode.sessions' : tab === 'files' ? 'mode.files' : 'mode.changes')}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* The collapsed rail keeps search as its own 36px control. */}
       {!wide && <div className={css.search}>
         <Tooltip label={t('search')}>
@@ -1106,7 +1126,9 @@ export function WorkspaceBrowser({
       {/* Always-mounted seat keeps the region's flex slot while the list
           itself is wide-only. */}
       <div className={css.listArea}>
-        {wide && (normalizedQuery !== ''
+        {wide && mode === 'files' && renderSlot('sidebar.workspaces.files', {})}
+        {wide && mode === 'changes' && renderSlot('sidebar.workspaces.changes', {})}
+        {wide && mode === 'sessions' && (normalizedQuery !== ''
           ? (
             <SearchResults
               useSessions={useSessions}

@@ -38,6 +38,46 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+/* Region mode switch (会话 / 文件 / 变更): compact segmented control under
+   the section header; wide state only. */
+.modeTabs {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  margin: 4px var(--dsh-sidebar-inline-padding) 6px 0;
+  padding: 2px;
+  border-radius: var(--dsw-radius-m, 8px);
+  background: var(--dsw-alias-button-tool-bar-fill);
+}
+
+.modeTab {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  padding: 0 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modeTab:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.modeTabActive,
+.modeTabActive:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-button-tool-bar-hover);
+}
+
 /* Section header: title, an inline search control, and the two trailing
    actions. Expanding search collapses the action cluster and takes its room. */
 .sectionHeader {

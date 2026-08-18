@@ -101,8 +101,15 @@ export interface SidebarOwnerProps {
 /** Conversation owner share: business state and actions belong to the registrant. */
 export interface ConvOwnerProps {}
 
-/** Details owner share: empty — sessionId arrives as a framework-standard prop. */
-export interface DetailsOwnerProps {}
+/**
+ * Details owner share: sessionId arrives as a framework-standard prop; the
+ * workbench preview target arrives from the layout store (null = tool
+ * details, the DetailsPanel's default content).
+ */
+export interface DetailsOwnerProps {
+  /** Workspace workbench preview to render instead of tool details (absent or null = tool details). */
+  preview?: import('@deepseek-ai/dsh-client-runtime/client').WorkspacePreviewTarget | null | undefined
+}
 
 /** Required services (cordis fiber inject — the loader passes all module exports as an object plugin). */
 export const inject = ['slots', 'theme']

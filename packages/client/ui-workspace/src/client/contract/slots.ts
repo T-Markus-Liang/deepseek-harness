@@ -56,8 +56,15 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.hero.workspace.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
     /** Directory-flow hole under the sidebar browsing region (declared by the WorkspaceBrowser entry). */
     'sidebar.workspaces.directoryFlow': { kind: 'single'; scope: 'root'; owner: DirectoryFlowOwnerProps }
+    /** Sidebar Files view (read-only workspace file tree), shown when the browser mode is `files`. */
+    'sidebar.workspaces.files': { kind: 'single'; scope: 'root'; owner: WorkbenchViewOwnerProps }
+    /** Sidebar Changes view (read-only Git status), shown when the browser mode is `changes`. */
+    'sidebar.workspaces.changes': { kind: 'single'; scope: 'root'; owner: WorkbenchViewOwnerProps }
   }
 }
+
+/** Owner share of the sidebar workbench views: empty — data arrives through framework hooks and the occupant's inject face. */
+export interface WorkbenchViewOwnerProps {}
 
 /** The two directory-flow holes; a flow package's client half registers its one component into both. */
 export type DirectoryFlowSlotName =
@@ -140,7 +147,7 @@ export type WorkspaceBrowserInjected = DirectoryPickingInjected & {
 /** Full browser props: shell owner share + viewing store + injected actions + the locale seat. */
 export type WorkspaceBrowserProps =
   PropsRuntime<'sidebar.workspaces'>
-  & PropsRenderSlots<'sidebar.workspaces.directoryFlow'>
+  & PropsRenderSlots<'sidebar.workspaces.directoryFlow' | 'sidebar.workspaces.files' | 'sidebar.workspaces.changes'>
   & PropsStore<ReturnType<typeof createWorkspaceViewStore>>
   & Omit<WorkspaceBrowserInjected, 'hooks'>
   & DirectoryPickingHooks

@@ -149,6 +149,52 @@ abstract capability(): DirectoryPickerCapability
 
 Source: [`packages/host/directory-picker/src/index.ts:131`](../../packages/host/directory-picker/src/index.ts)
 
+<a id="ctxworkspaceinspector--workspaceinspector"></a>
+
+### `ctx.workspaceInspector` — `WorkspaceInspector`
+
+Reads only descendants of one registered workspace root.
+
+```ts cordis-catalog
+/**
+ * List one directory level under a registered workspace root.
+ * @param workspacePath - absolute registered workspace root.
+ * @param path - workspace-relative directory ('' = root).
+ * @param signal - aborts the underlying filesystem reads.
+ * @returns the level's entries (`.git` filtered) with the truncation flag.
+ */
+async listTreeLevel(workspacePath: string, path: string = '', signal?: AbortSignal): Promise<WorkspaceTreeLevel>
+
+/**
+ * Read a bounded UTF-8 text preview of one workspace file.
+ * @param workspacePath - absolute registered workspace root.
+ * @param path - workspace-relative file path.
+ * @param signal - aborts the underlying filesystem reads.
+ * @returns the file text, its total byte size, and an optional language hint.
+ */
+async readFilePreview(workspacePath: string, path: string, signal?: AbortSignal): Promise<WorkspaceFilePreview>
+
+/**
+ * Read the workspace's complete uncommitted Git status.
+ * @param workspacePath - absolute registered workspace root.
+ * @param signal - aborts the git subprocess.
+ * @returns branch, ahead/behind counts, and every staged, unstaged, and untracked file.
+ */
+async gitStatus(workspacePath: string, signal?: AbortSignal): Promise<WorkspaceGitStatus>
+
+/**
+ * Read one changed file's diff as old/new text on the requested basis.
+ * @param workspacePath - absolute registered workspace root.
+ * @param path - workspace-relative file path with an uncommitted change.
+ * @param basis - 'staged' compares HEAD against the index; 'worktree' compares the better base against the working file.
+ * @param signal - aborts the git subprocesses and file read.
+ * @returns old/new text (oldText null when the file is added on that basis).
+ */
+async gitFileDiff(workspacePath: string, path: string, basis: 'staged' | 'worktree', signal?: AbortSignal): Promise<WorkspaceGitDiff>
+```
+
+Source: [`packages/workspace/workspace-inspector/src/index.ts:42`](../../packages/workspace/workspace-inspector/src/index.ts)
+
 <a id="ctxworkspaceregistry--workspaceregistry"></a>
 
 ### `ctx.workspaceRegistry` — `WorkspaceRegistry`

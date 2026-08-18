@@ -1,0 +1,268 @@
+/* Workbench views (Files / Changes sidebar seats + details preview):
+   compact VS Code-style rows over the Black Whale deep-blue shell; colors
+   resolve through --dsw-* tokens only. */
+
+.root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 28px;
+  padding: 0 4px 0 10px;
+}
+
+.headerTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.branchBadge {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--dsw-alias-label-primary-bluish);
+}
+
+.syncBadge {
+  font-weight: 500;
+  color: var(--dsw-alias-label-caption);
+}
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.iconButton {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.iconButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.iconButtonActive,
+.iconButtonActive:hover {
+  color: var(--dsw-alias-label-primary-bluish);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 24px;
+  border: none;
+  padding: 0 10px 0 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.row:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.rowOpen {
+  color: var(--dsw-alias-label-primary);
+}
+
+.rowGlyph {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  color: var(--dsw-alias-label-caption);
+}
+
+.fileGlyph {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--dsw-alias-label-caption);
+}
+
+.rowName {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-caption);
+}
+
+.errorNote {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--dsw-alias-state-error-primary);
+  overflow-wrap: anywhere;
+}
+
+.group {
+  margin-top: 4px;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 10px 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.groupCount {
+  font-weight: 500;
+  color: var(--dsw-alias-label-caption);
+}
+
+.statusLetter {
+  flex: none;
+  width: 12px;
+  margin-left: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.statusStaged {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.statusUntracked {
+  color: var(--dsw-alias-label-caption);
+}
+
+/* Details-column preview. */
+
+.previewRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.previewHeader {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 8px 0 12px;
+}
+
+.previewPath {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.basisSwitch {
+  flex: none;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--dsw-radius-m, 8px);
+  background: var(--dsw-alias-button-tool-bar-fill);
+}
+
+.basisButton {
+  height: 20px;
+  border: none;
+  border-radius: 5px;
+  padding: 0 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.basisButton:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.basisButtonActive,
+.basisButtonActive:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-button-tool-bar-hover);
+}
+
+.previewBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 12px;
+}
+
+.previewNote {
+  padding: 12px 4px;
+  font-size: 12px;
+  color: var(--dsw-alias-label-caption);
+}
+
+.previewError {
+  padding: 12px 4px;
+  font-size: 12px;
+  color: var(--dsw-alias-state-error-primary);
+  overflow-wrap: anywhere;
+}

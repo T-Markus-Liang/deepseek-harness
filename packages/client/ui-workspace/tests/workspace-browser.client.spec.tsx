@@ -139,7 +139,8 @@ describe('WorkspaceBrowser', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: '单列表' }))
     // Store-driven flip: title changes, rows flatten newest-first, headers gone.
     expect(b.store.getSnapshot().groupBy).toBe('flat')
-    expect(screen.getByText('会话')).toBeTruthy()
+    // The section label and the 会话 mode tab share the copy; assert presence, not uniqueness.
+    expect(screen.getAllByText('会话').length).toBeGreaterThan(0)
     expect(screen.queryByText('alpha')).toBeNull()
     expect(screen.getByText('alpha-s')).toBeTruthy()
     expect(screen.getByText('beta-s')).toBeTruthy()

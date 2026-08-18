@@ -204,7 +204,7 @@ export function AppFrame({
             is session-maybe; the strict details entry naturally renders
             empty while no session is current. */}
         <CenterColumn>{renderSlot('conversation', {})}</CenterColumn>
-        <DetailsColumn>{renderSlot('details', {})}</DetailsColumn>
+        <DetailsColumn>{renderSlot('details', { preview: panels.preview })}</DetailsColumn>
       </>
       <div className={css.overlayLayer} data-shell-overlay>
         {renderSlot('shell.overlay', {})}

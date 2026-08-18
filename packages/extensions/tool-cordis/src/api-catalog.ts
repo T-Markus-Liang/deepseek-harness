@@ -2118,6 +2118,37 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'workspaceInspector',
+    summary: 'Reads only descendants of one registered workspace root.',
+    description: 'Reads only descendants of one registered workspace root.',
+    methods: [
+      {
+        signature: 'async listTreeLevel(workspacePath: string, path: string = \'\', signal?: AbortSignal): Promise<WorkspaceTreeLevel>',
+        description: 'List one directory level under a registered workspace root.',
+        parameters: [{ name: 'workspacePath', description: 'absolute registered workspace root.' }, { name: 'path', description: 'workspace-relative directory (\'\' = root).' }, { name: 'signal', description: 'aborts the underlying filesystem reads.' }],
+        returns: 'the level\'s entries (`.git` filtered) with the truncation flag.',
+      },
+      {
+        signature: 'async readFilePreview(workspacePath: string, path: string, signal?: AbortSignal): Promise<WorkspaceFilePreview>',
+        description: 'Read a bounded UTF-8 text preview of one workspace file.',
+        parameters: [{ name: 'workspacePath', description: 'absolute registered workspace root.' }, { name: 'path', description: 'workspace-relative file path.' }, { name: 'signal', description: 'aborts the underlying filesystem reads.' }],
+        returns: 'the file text, its total byte size, and an optional language hint.',
+      },
+      {
+        signature: 'async gitStatus(workspacePath: string, signal?: AbortSignal): Promise<WorkspaceGitStatus>',
+        description: 'Read the workspace\'s complete uncommitted Git status.',
+        parameters: [{ name: 'workspacePath', description: 'absolute registered workspace root.' }, { name: 'signal', description: 'aborts the git subprocess.' }],
+        returns: 'branch, ahead/behind counts, and every staged, unstaged, and untracked file.',
+      },
+      {
+        signature: 'async gitFileDiff(workspacePath: string, path: string, basis: \'staged\' | \'worktree\', signal?: AbortSignal): Promise<WorkspaceGitDiff>',
+        description: 'Read one changed file\'s diff as old/new text on the requested basis.',
+        parameters: [{ name: 'workspacePath', description: 'absolute registered workspace root.' }, { name: 'path', description: 'workspace-relative file path with an uncommitted change.' }, { name: 'basis', description: '\'staged\' compares HEAD against the index; \'worktree\' compares the better base against the working file.' }, { name: 'signal', description: 'aborts the git subprocesses and file read.' }],
+        returns: 'old/new text (oldText null when the file is added on that basis).',
+      },
+    ],
+  },
+  {
     key: 'workspaceRegistry',
     summary: 'Durable workspace registry.',
     description: 'Durable workspace registry. Startup waits for `sessionPersistence`, builds one canonical-cwd header index, and completes the one-time history bootstrap before the service becomes active. The persistence dependency is mandatory so an unavailable peer can never be mistaken for an empty history and commit the initialized marker.',

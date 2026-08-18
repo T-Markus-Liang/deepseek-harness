@@ -7,7 +7,7 @@
  * derives its PropsStore share from the return type, and the service face
  * receives the bound actions through the registration's inject hook.
  */
-import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-runtime/client'
+import { defineStore, type EngineStoreHandle, type WorkspacePreviewTarget } from '@deepseek-ai/dsh-client-runtime/client'
 import {
   clampWidth, DETAILS_DEFAULT, DETAILS_MAX, DETAILS_MIN,
   SIDEBAR_DEFAULT, SIDEBAR_MAX, SIDEBAR_MIN,
@@ -20,7 +20,14 @@ import {
  * `narrowExpanded` is the manual override that re-expands the auto-collapsed
  * sidebar over the squeezed center without rewriting the width preference.
  */
-type LayoutState = { sidebar: number; details: number; narrow: boolean; narrowExpanded: boolean }
+type LayoutState = {
+  sidebar: number
+  details: number
+  narrow: boolean
+  narrowExpanded: boolean
+  /** Workspace workbench preview the details column shows instead of tool details (null = tool details). */
+  preview: WorkspacePreviewTarget | null
+}
 
 /**
  * Annotation twin of the actions literal below (the export needs a declared
@@ -33,6 +40,7 @@ type LayoutActions = {
   setNarrow: (draft: LayoutState, narrow: boolean) => void
   openDetails: (draft: LayoutState) => void
   closeDetails: (draft: LayoutState) => void
+  openPreview: (draft: LayoutState, target: WorkspacePreviewTarget) => void
 }
 
 /**
@@ -47,7 +55,7 @@ type LayoutActions = {
  */
 export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
   const handle = defineStore({
-    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false }),
+    init: (): LayoutState => ({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false, preview: null }),
     actions: {
       setSidebar: (d, px: number) => { d.sidebar = clampWidth(px, SIDEBAR_MIN, SIDEBAR_MAX) },
       setDetails: (d, px: number) => { d.details = clampWidth(px, DETAILS_MIN, DETAILS_MAX) },
@@ -65,7 +73,13 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
         d.narrowExpanded = false
       },
       openDetails: (d) => { if (d.details === 0) d.details = DETAILS_DEFAULT },
-      closeDetails: (d) => { d.details = 0 },
+      // Closing the column drops the workbench preview too: reopening shows
+      // tool details again rather than a stale file from an earlier session.
+      closeDetails: (d) => { d.details = 0; d.preview = null },
+      openPreview: (d, target: WorkspacePreviewTarget) => {
+        d.preview = target
+        if (d.details === 0) d.details = DETAILS_DEFAULT
+      },
     },
   })
   return handle

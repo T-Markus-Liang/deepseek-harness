@@ -14,9 +14,13 @@ export const FLAT_SESSION_ORDER_KEY = '__flat_session_order__'
 export type SessionGroupBy = 'workspace' | 'flat'
 /** Session order: user-arranged only, or user-arranged plus activity promotion. */
 export type SessionOrderBy = 'manual' | 'updated'
+/** Sidebar region mode: the session browser or a workspace workbench view. */
+export type BrowserMode = 'sessions' | 'files' | 'changes'
 
 /** Workspace browser viewing state persisted across surface remounts and reloads. */
 type WorkspaceViewState = {
+  /** Which region the sidebar shows; sessions stays the default. */
+  mode: BrowserMode
   groupBy: SessionGroupBy
   orderBy: SessionOrderBy
   /** Explicit zero-or-five-session state keyed by Workspace group identity. */
@@ -32,6 +36,7 @@ type WorkspaceViewState = {
  * return type); drift fails assignability at the defineStore call.
  */
 type WorkspaceViewActions = {
+  setMode: (draft: WorkspaceViewState, mode: BrowserMode) => void
   setGroupBy: (draft: WorkspaceViewState, mode: SessionGroupBy) => void
   setOrderBy: (draft: WorkspaceViewState, mode: SessionOrderBy) => void
   setGroupExpanded: (draft: WorkspaceViewState, key: string, expanded: boolean) => void
@@ -52,14 +57,16 @@ type WorkspaceViewActions = {
 export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState, WorkspaceViewActions> {
   return defineStore({
     init: (): WorkspaceViewState => ({
+      mode: 'sessions',
       groupBy: 'workspace',
       orderBy: 'updated',
       groupExpansion: {},
       sessionOrderByAccount: {},
       sessionUpdatedAtByAccount: {},
     }),
-    persist: 'dsh.workspace.view.v5',
+    persist: 'dsh.workspace.view.v6',
     actions: {
+      setMode: (d, mode: BrowserMode) => { d.mode = mode },
       setGroupBy: (d, mode: SessionGroupBy) => { d.groupBy = mode },
       setOrderBy: (d, mode: SessionOrderBy) => { d.orderBy = mode },
       setGroupExpanded: (d, key: string, expanded: boolean) => { d.groupExpansion[key] = expanded },

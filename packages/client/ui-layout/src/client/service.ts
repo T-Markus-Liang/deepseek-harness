@@ -9,6 +9,7 @@
  * declared action set, delivered as the registration's bound actions.
  */
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
+import type { WorkspacePreviewTarget } from '@deepseek-ai/dsh-client-runtime/client'
 import type { createLayoutStore } from './stores.ts'
 
 /** The layout store's bound action set (framework-baked, draft params peeled). */
@@ -25,8 +26,14 @@ export interface ILayout {
   toggleSidebar(): void
   /** Open the details panel (no-op when already open). */
   openDetails(): void
-  /** Close the details panel. */
+  /** Close the details panel (also drops any workbench preview). */
   closeDetails(): void
+  /**
+   * Show a workspace workbench preview (file or Git diff) in the details
+   * column, opening it when closed.
+   * @param target - the read-only preview the details column should render.
+   */
+  openPreview(target: WorkspacePreviewTarget): void
 }
 
 /** Cross-plugin panel-action face (ctx.layout). */
@@ -57,6 +64,11 @@ export class LayoutController implements ILayout {
   /** Close the details panel. */
   closeDetails(): void {
     this.#require().closeDetails()
+  }
+
+  /** Open the details column on a workspace workbench preview. */
+  openPreview(target: WorkspacePreviewTarget): void {
+    this.#require().openPreview(target)
   }
 
   #require(): PanelActions {

@@ -727,7 +727,7 @@ export interface Config {
 
 ## `@deepseek-ai/dsh-host-apiproxy`
 
-需要：`agentDefaultModel` · `agents` · `attachments` · `directoryPicker` · `llm` · `sessions` · `subagents` · `sessionQuery` · `tools` · `userInteraction` · `workspace`
+需要：`agentDefaultModel` · `agents` · `attachments` · `directoryPicker` · `llm` · `sessions` · `subagents` · `sessionQuery` · `tools` · `userQuestions` · `workspaceRegistry` · `workspaceInspector`
 
 ```ts config-catalog
 /** Gateway plugin configuration. */
@@ -3080,6 +3080,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-tool`（[`packages/client/ui-tool/src/index.ts`](../packages/client/ui-tool/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-trajectory`（[`packages/client/ui-trajectory/src/index.ts`](../packages/client/ui-trajectory/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-user-questions`（[`packages/client/ui-user-questions/src/index.ts`](../packages/client/ui-user-questions/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-workbench`（[`packages/client/ui-workbench/src/index.ts`](../packages/client/ui-workbench/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-workflow-run`（[`packages/client/ui-workflow-run/src/index.ts`](../packages/client/ui-workflow-run/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-workspace`（[`packages/client/ui-workspace/src/index.ts`](../packages/client/ui-workspace/src/index.ts)）
 - `@deepseek-ai/dsh-command-compact` — 需要 `commands` · `compact`（[`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts)）
@@ -3111,6 +3112,7 @@ export interface Config {
 - `@deepseek-ai/dsh-tool-subagent-control` — 需要 `tools` · `subagents`（[`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts)）
 - `@deepseek-ai/dsh-user-questions`（[`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts)）
 - `@deepseek-ai/dsh-workspace` — 需要 `storageDomain` · `sessionPersistence`（[`packages/workspace/workspace/src/index.ts`](../packages/workspace/workspace/src/index.ts)）
+- `@deepseek-ai/dsh-workspace-inspector` — 需要 `fs` · `subprocess`（[`packages/workspace/workspace-inspector/src/index.ts`](../packages/workspace/workspace-inspector/src/index.ts)）
 
 ## Seam 包（不可直接加载）
 

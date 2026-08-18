@@ -230,6 +230,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Owns WorkspaceId-branded records over the domain facility; stable sessionIds accounts drive Host RPC and GUI projections.',
   },
   {
+    key: 'workspaceInspector',
+    pkg: 'workspace-inspector',
+    title: 'Read-only workspace inspection',
+    mode: 'core',
+    consumers: ['apiproxy'],
+    note: 'Answers the browser workbench\'s file-tree, preview, and Git reads constrained to one registered workspace root; no write or shell path exists.',
+  },
+  {
     key: 'sessionQuery',
     pkg: 'session-query',
     title: 'Session reads, traces, filters, and search',

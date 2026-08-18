@@ -8,7 +8,7 @@ import type {
 import type {
   CommandNode, CompactionSummaryNode, ConversationSnapshot, ConversationTurnDataMap,
   ObservableSnapshot, PendingInteraction, PendingWait, SessionId, ToolCallBlock,
-  TurnLocation, WorkspaceId,
+  TurnLocation, WorkspaceId, WorkspacePreviewTarget,
 } from '@deepseek-ai/dsh-client-runtime/client'
 import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MessageId } from '@deepseek-ai/dsh-client-connection/client'
@@ -122,6 +122,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      * instead; this one is the whole panel.
      */
     'conversation.details.tool': { kind: 'single'; scope: 'session'; owner: DetailsToolOwnerProps }
+    /**
+     * The details panel body when the workspace workbench asked for a file
+     * or Git-diff preview instead of tool details. The owner passes the
+     * read-only {@link WorkspacePreviewTarget} verbatim; the occupant fetches
+     * content through the runtime workspace inspection face.
+     */
+    'conversation.details.workspacePreview': { kind: 'single'; scope: 'session'; owner: DetailsWorkspacePreviewOwnerProps }
     /**
      * The composer takeover chain: entries are selector-routed replacements
      * of the default InputBar. Declared by this package's 'conversation'
@@ -369,6 +376,12 @@ export interface ChatNodeOwnerProps {
 /** Full props of one registered keyed Chat business renderer. */
 export type ChatNodeViewProps<Kind extends ChatNodeKind = ChatNodeKind> =
   PropsRuntime<'conversation.chat.node', Kind> & PropsLocale<'conversation'>
+
+/** Owner currency of the details panel's workspace workbench preview renderer. */
+export interface DetailsWorkspacePreviewOwnerProps {
+  /** Read-only workspace preview the workbench asked the details column to show. */
+  target: WorkspacePreviewTarget
+}
 
 /** Owner currency of the details panel's Tool output renderer. */
 export interface DetailsToolOwnerProps {
@@ -722,7 +735,7 @@ export interface DetailsInjected {
 }
 
 /** Full details-slot props: selection store, Tool output seat, injected close callback, and locale. */
-export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'conversation.details.tool'>
+export type DetailsSlotProps = PropsRuntime<'details'> & PropsRenderSlots<'conversation.details.tool' | 'conversation.details.workspacePreview'>
   & PropsStore<ChatStore> & DetailsInjected & PropsLocale<'conversation'>
 
 /** Owner share common to the hero / New-Session Workspace pickers. */

@@ -106,6 +106,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   web: 'web.md',
   workflowEngine: 'workflow.md',
   workspaceRegistry: 'workspace.md',
+  workspaceInspector: 'workspace.md',
 }
 
 /**
@@ -508,6 +509,10 @@ export const FOUNDATION_TYPE_NAMES: ReadonlySet<string> = new Set([
 /** Project types deliberately documented outside the subsystems catalog. */
 export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   z: 'schemastery schema constructor is owned by vendor/schemastery (vendored upstream)',
+  WorkspaceTreeLevel: 'inspection result type is owned by packages/workspace/workspace-inspector/src/types.ts',
+  WorkspaceFilePreview: 'inspection result type is owned by packages/workspace/workspace-inspector/src/types.ts',
+  WorkspaceGitStatus: 'inspection result type is owned by packages/workspace/workspace-inspector/src/types.ts',
+  WorkspaceGitDiff: 'inspection result type is owned by packages/workspace/workspace-inspector/src/types.ts',
   BeginCommandRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',
   InsertReferenceRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',
   ConsumeTokenRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',
