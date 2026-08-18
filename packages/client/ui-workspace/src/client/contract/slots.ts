@@ -135,6 +135,13 @@ export type WorkspaceBrowserInjected = DirectoryPickingInjected & {
    */
   archiveSession: (sessionId: SessionId) => Promise<void>
   /**
+   * Permanently delete one cold Session: the host destroys its persisted log
+   * and drops every workspace account and archive entry. The host rejects a
+   * live session (`session-live`), a subagent-origin one (`session-subagent`),
+   * and an unknown id (`session-not-found`). The operation is irreversible.
+   */
+  deleteSession: (sessionId: SessionId) => Promise<void>
+  /**
    * Reorder a session inside its Workspace account (DOM-insertBefore
    * semantics: omitted anchor appends to the end). The view refreshes from
    * the Host response/changed frame; failures leave the order unchanged.

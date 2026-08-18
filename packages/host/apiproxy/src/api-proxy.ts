@@ -8,7 +8,7 @@ import { mkdir, stat } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { installModelSelection } from '@deepseek-ai/dsh-agent'
-import type { Agent, ModelSelection, ModelSelectionRef, AgentOptions, AgentStatus } from '@deepseek-ai/dsh-agent'
+import type { Agent, AgentHandle, ModelSelection, ModelSelectionRef, AgentOptions, AgentStatus } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-presets/types'
 import { AttachmentError } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
@@ -1096,6 +1096,15 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
   const presetSwitches = new Map<SessionId, Promise<unknown>>()
   /** Client-chosen identity creation/resume, deduplicated across concurrent retries. */
   const sessionCreations = new Map<SessionId, Promise<Agent>>()
+  /**
+   * The AgentHandle retained from every create/resume this proxy issued, keyed
+   * by session id. The registry exposes no dispose path, so `session.stop`
+   * needs the exact handle to release an agent (stop loop, unregister, remove
+   * its session from the store). An agent this proxy did not create — a
+   * loop-owned config agent or a subagent — has no entry here and is not
+   * stoppable through this seam.
+   */
+  const agentHandles = new Map<SessionId, AgentHandle>()
   /** Serializes path ownership and explicit title checks with Workspace mutations. */
   let workspaceCreationChain = Promise.resolve()
   const pendingQuestions = new Map<RpcId, PendingQuestion>()
@@ -1625,11 +1634,16 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           // session's history was produced under that composition, and
           // rebuilding it differently would replay tool calls the model can no
           // longer make.
-          return (await ctx.agents.resume({
+          // The handle is the only teardown capability: the registry exposes
+          // no dispose path, so `session.stop` needs the exact handle to
+          // release a resumed agent.
+          const resumed = await ctx.agents.resume({
             resumeSessionId: sessionId,
             agentOptions: agentOptions(),
             setup: (await composeAgent(storedPreset)).setup,
-          })).agent
+          })
+          agentHandles.set(sessionId, resumed)
+          return resumed.agent
         }
 
         try {
@@ -1638,7 +1652,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           throw new Error(`failed to ensure project directory "${cwd}": ${String(error)}`, { cause: error })
         }
         const composition = await composeAgent(presetId)
-        return (await ctx.agents.create({
+        const created = await ctx.agents.create({
           sessionId,
           agentOptions: agentOptions(),
           meta: {
@@ -1646,7 +1660,9 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             ...composition.agentPreset === undefined ? {} : { agentPreset: composition.agentPreset },
           },
           setup: composition.setup,
-        })).agent
+        })
+        agentHandles.set(sessionId, created)
+        return created.agent
       })().catch((error: unknown) => {
         // Another Host entry path may have published the same identity while
         // this operation crossed an asynchronous persistence/filesystem step.
@@ -2572,6 +2588,41 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         }
         agent.cancel({ kind: 'user' }, { keepInbox: true })
         return Promise.resolve(ok(request, { accepted: true as const }))
+      },
+
+      stop(request) {
+        const { sessionId } = request.payload
+        const agent = ctx.agents.get(sessionId)
+        if (agent === undefined) {
+          return Promise.resolve(err(request, {
+            code: 'session-not-found',
+            message: `session "${sessionId}" not found (not attached)`,
+            details: { sessionId },
+          }))
+        }
+        if (hasSubagentOwner(agent.session, agent)) {
+          return Promise.resolve(err(request, {
+            code: 'session-subagent',
+            message: `session "${sessionId}" belongs to a subagent`,
+            details: { sessionId },
+          }))
+        }
+        const handle = agentHandles.get(sessionId)
+        if (handle === undefined) {
+          return Promise.resolve(err(request, {
+            code: 'internal',
+            message: `session "${sessionId}" has a live agent this proxy does not own`,
+            details: {},
+          }))
+        }
+        return handle.dispose().then(
+          () => ok(request, { stopped: true as const }),
+          (error: unknown) => err(request, {
+            code: 'internal',
+            message: `failed to stop session "${sessionId}": ${String(error)}`,
+            details: {},
+          }),
+        )
       },
     },
 

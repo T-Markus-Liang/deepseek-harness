@@ -351,3 +351,13 @@ export const sessionCancelRequestSchema = z.object({
 export const sessionCancelValueSchema = z.object({
   accepted: z.literal(true),
 }) satisfies z.ZodType<Wire<ResponseValue<'session.cancel'>>>
+
+/** session.stop request payload. */
+export const sessionStopRequestSchema = z.object({
+  sessionId: sessionIdSchema,
+}) satisfies z.ZodType<Wire<RequestPayload<'session.stop'>>>
+
+/** session.stop response value. */
+export const sessionStopValueSchema = z.object({
+  stopped: z.literal(true),
+}) satisfies z.ZodType<Wire<ResponseValue<'session.stop'>>>

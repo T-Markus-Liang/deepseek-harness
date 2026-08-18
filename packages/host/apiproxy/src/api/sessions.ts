@@ -370,4 +370,15 @@ export interface SessionsApi {
    */
   cancel(request: RpcRequest<{ sessionId: SessionId }>): Promise<RpcResponse<{ accepted: true }>>
 
+  /**
+   * Stops an ordinary session's loaded agent outright: the loop stops and
+   * drains, the agent unregisters, and its session leaves the store, so a
+   * following relocation or destruction no longer sees it as live. Unlike
+   * `cancel` (which pauses one turn and keeps the agent), `stop` is the hard
+   * teardown; a running turn is aborted with it. A subagent-owned session
+   * rejects with `session-subagent`, and a session with no live agent rejects
+   * with `session-not-found`.
+   */
+  stop(request: RpcRequest<{ sessionId: SessionId }>): Promise<RpcResponse<{ stopped: true }>>
+
 }

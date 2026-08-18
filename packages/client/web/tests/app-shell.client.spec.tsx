@@ -58,4 +58,10 @@ describe('app-shell assembly plugin', () => {
     expect(ctx.get('appShell')).toBeUndefined()
     expect(() => slots.renderSlot('root', {})).toThrow('not installed')
   })
+
+  it('records session delete through the test-sessions face', async () => {
+    const sessions = new TestSessions(stabilize, new Context())
+    await sessions.deleteSession('gone' as never)
+    expect(sessions.calls).toContainEqual({ method: 'deleteSession', args: ['gone'] })
+  })
 })
