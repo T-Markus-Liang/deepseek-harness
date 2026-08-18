@@ -300,7 +300,35 @@ export function InputBar({
     // oxlint-disable-next-line typescript/no-deprecated
     const composing = composingRef.current || e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      if (keyboard.arbitrate(e.key === 'ArrowUp' ? 'up' : 'down', composing) === 'consumed') e.preventDefault()
+      const outcome = keyboard.arbitrate(e.key === 'ArrowUp' ? 'up' : 'down', composing)
+      if (outcome === 'consumed') {
+        e.preventDefault()
+        return
+      }
+      // Terminal-style sent-message recall: ↑/↓ browse the machine's history
+      // stack, but only on the first (↑) / last (↓) line of the draft, and
+      // only when the menu passes the key through (composing is excluded above).
+      if (outcome === 'pass' && !composing) {
+        const el = e.currentTarget
+        // selectionEnd is number|null in lib.dom; the type-aware lint program narrows it.
+        // oxlint-disable-next-line typescript/no-unnecessary-condition
+        const caret = el.selectionEnd ?? 0
+        const draft = keyboard.snapshot.draft
+        if (e.key === 'ArrowUp' && draft.slice(0, caret).indexOf('\n') === -1) {
+          if (keyboard.historyPrev()) {
+            e.preventDefault()
+            // The draft was replaced; re-read it and park the caret at its end.
+            el.selectionStart = el.selectionEnd = keyboard.snapshot.draft.length
+            return
+          }
+        } else if (e.key === 'ArrowDown' && draft.slice(caret).indexOf('\n') === -1) {
+          if (keyboard.historyNext()) {
+            e.preventDefault()
+            el.selectionStart = el.selectionEnd = keyboard.snapshot.draft.length
+            return
+          }
+        }
+      }
       return
     }
     if (e.key === 'Escape') {

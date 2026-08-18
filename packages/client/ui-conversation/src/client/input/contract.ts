@@ -14,6 +14,9 @@ import type {
 import type { QueueRow } from '../contract/queue.ts'
 import type { InputSubmitMode } from '../contract/composer-submission.ts'
 
+/** Sent-message history stack cap (newest last; over-limit evicts the oldest). */
+export const HISTORY_LIMIT = 50
+
 /** Browser-runtime identity of one unsent image draft. */
 export type DraftAttachmentId = Branded<'DraftAttachmentId'>
 
@@ -122,6 +125,16 @@ export interface ComposerKeyboard {
   arbitrate(key: ArbitrateKey, composing: boolean): ArbitrateOutcome
   /** Space adjudication; true = the input applied a claim — caller preventDefaults. */
   space(): boolean
+  /**
+   * Step one sent message back (↑); true = the draft was replaced — the caller
+   * preventDefaults and repositions the caret.
+   */
+  historyPrev(): boolean
+  /**
+   * Step one sent message forward (↓); true = the draft was replaced — the caller
+   * preventDefaults and repositions the caret.
+   */
+  historyNext(): boolean
   /** Dismiss the popupSelect shell (any interaction outside the box). */
   dismissPopup(): void
 }
@@ -221,6 +234,12 @@ export interface InputState {
   readonly paste?: PasteAttemptState
   /** Read-only transient inbox projection (`session/queue`, including pending steering). */
   readonly queue: readonly QueuedMessage[]
+  /** Sent-message plain-text stack (newest last; bounded by HISTORY_LIMIT). */
+  readonly history: readonly string[]
+  /** History browsing cursor: -1 = normal draft mode; else index into history. */
+  readonly historyIndex: number
+  /** Draft saved when history browsing began; restored past the newest entry. */
+  readonly historyDraft: string
 }
 
 /**
@@ -276,6 +295,10 @@ export type InputEvent =
    * undo must not resurrect sent content (mirrors submit-settled's success arm).
    */
   | { readonly type: 'send-committed' }
+  /** ↑: browse one sent message back (terminal-style recall); no-op when empty or already at the oldest. */
+  | { readonly type: 'history-prev' }
+  /** ↓: browse one sent message forward; a fresh draft (index -1) is a no-op. */
+  | { readonly type: 'history-next' }
   | { readonly type: 'release' }
 
 /**

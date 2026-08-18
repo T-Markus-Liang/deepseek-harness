@@ -262,6 +262,28 @@ export class SessionInputShell implements SessionInput {
   }
 
   /**
+   * Step one sent message back (↑). Returns true when the machine's browsing
+   * cursor moved, i.e. the draft was replaced — the caller preventDefaults
+   * and repositions the caret.
+   */
+  historyPrev(): boolean {
+    const before = this.core.state.historyIndex
+    this.run(this.core.dispatch({ type: 'history-prev' }))
+    return this.core.state.historyIndex !== before
+  }
+
+  /**
+   * Step one sent message forward (↓). Returns true when the machine's
+   * browsing cursor moved, i.e. the draft was replaced — the caller
+   * preventDefaults and repositions the caret.
+   */
+  historyNext(): boolean {
+    const before = this.core.state.historyIndex
+    this.run(this.core.dispatch({ type: 'history-next' }))
+    return this.core.state.historyIndex !== before
+  }
+
+  /**
    * Hot plain-text reference lexicon source for the decoration scan
    * (the plain-text-reference decision;
    * see .agents/notes/implemented/architecture/2026-07-25-web-input-machine-and-slash-pipeline.md):

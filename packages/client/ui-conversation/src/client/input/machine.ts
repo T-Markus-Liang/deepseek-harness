@@ -15,6 +15,7 @@
  */
 import type { CommandClaim, ReferenceInsert, TokenSpan } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { InputSubmitMode } from '../contract/composer-submission.ts'
+import { HISTORY_LIMIT } from './contract.ts'
 import type {
   ConsumeTokenGuard, EditRange, EditSelection, InputEffect, InputEvent, InputMachineOptions,
   InputState, Occurrence, PasteAttemptState, PasteComponent, SubmitAttempt,
@@ -120,6 +121,14 @@ export class InputMachine {
   private typingRun: { readonly end: number; readonly at: number } | undefined
   private paste: PasteAttemptState | undefined
   private pasteSeq = 0
+  /** Sent-message plain-text stack (newest last; bounded by HISTORY_LIMIT). */
+  private history: string[] = []
+  /** Browsing cursor: -1 = normal draft mode; else index into history. */
+  private historyIndex = -1
+  /** Draft saved on entering browsing; restored past the newest entry. */
+  private historyDraft = ''
+  /** Occurrences saved when entering browsing; restored when returning to the saved draft. */
+  private historyDraftOccurrences: readonly Occurrence[] = []
   private readonly mergeWindowMs: number
   private readonly now: () => number
 
@@ -140,6 +149,9 @@ export class InputMachine {
       occurrences: this.occurrences,
       ...(this.paste !== undefined ? { paste: this.paste } : {}),
       queue: EMPTY_QUEUE,
+      history: this.history,
+      historyIndex: this.historyIndex,
+      historyDraft: this.historyDraft,
     }
   }
 
@@ -168,6 +180,8 @@ export class InputMachine {
       case 'adjudication-failed': return this.onAdjudicationFailed(ev.attempt, ev.message)
       case 'submit-settled': return this.onSubmitSettled(ev)
       case 'send-committed': return this.onSendCommitted()
+      case 'history-prev': return this.onHistoryPrev()
+      case 'history-next': return this.onHistoryNext()
       case 'release': return this.onRelease()
       default: return unreachable(ev)
     }
@@ -239,6 +253,9 @@ export class InputMachine {
 
   private onDraftChanged(draft: string, editRange?: EditRange): InputEffect[] {
     if (draft === this.draft) return []
+    // A user edit while browsing a history entry returns to normal draft mode
+    // (the saved historyDraft is kept; only the cursor is dropped).
+    if (this.historyIndex !== -1) this.historyIndex = -1
     const range = editRange ?? diffEdit(this.draft, draft)
     // Single-char typing coalesces into the open run while contiguous and
     // inside the merge window; anything else opens its own transaction.
@@ -540,8 +557,17 @@ export class InputMachine {
   }
 
   /** Ordinary send accepted: clear as a commit (no undo unit; sent content
-   *  must not be resurrectable — same discipline as submit-settled success). */
+   *  must not be resurrectable — same discipline as submit-settled success).
+   *  The projected plain text lands in the history stack first (consecutive
+   *  duplicates collapse; blank sends skip) and browsing mode is left. */
   private onSendCommitted(): InputEffect[] {
+    const projected = projectClipboard(this.state)
+    if (projected.trim() !== '' && this.history[this.history.length - 1] !== projected) {
+      this.history = [...this.history, projected]
+      if (this.history.length > HISTORY_LIMIT) this.history = this.history.slice(1)
+    }
+    this.historyIndex = -1
+    this.historyDraft = ''
     this.claim = undefined
     this.occurrences = []
     this.adopt('')
@@ -549,6 +575,49 @@ export class InputMachine {
     this.redoStack = []
     this.typingRun = undefined
     this.paste = undefined
+    return []
+  }
+
+  /**
+   * ↑: browse one sent message back. Navigation adopts the plain-text entry
+   * WITHOUT an undo unit (undo never resurrects a browsed draft). Empty
+   * history and the oldest entry are no-ops; only phase 'plain' responds.
+   */
+  private onHistoryPrev(): InputEffect[] {
+    if (this.phase !== 'plain') return []
+    if (this.history.length === 0) return []
+    if (this.historyIndex === -1) {
+      this.historyDraft = this.draft
+      this.historyDraftOccurrences = this.occurrences
+      this.occurrences = []
+      this.historyIndex = this.history.length - 1
+      // The index is guaranteed valid by the length check above.
+      this.adopt(this.history[this.historyIndex] as string)
+    } else if (this.historyIndex > 0) {
+      this.historyIndex -= 1
+      this.occurrences = []
+      this.adopt(this.history[this.historyIndex] as string)
+    }
+    return []
+  }
+
+  /**
+   * ↓: browse one sent message forward. The newest entry hands back to the
+   * saved draft (historyDraft); navigation never records undo units. Only
+   * phase 'plain' responds.
+   */
+  private onHistoryNext(): InputEffect[] {
+    if (this.phase !== 'plain') return []
+    if (this.historyIndex === -1) return []
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex += 1
+      this.occurrences = []
+      this.adopt(this.history[this.historyIndex] as string)
+    } else {
+      this.historyIndex = -1
+      this.occurrences = this.historyDraftOccurrences
+      this.adopt(this.historyDraft)
+    }
     return []
   }
 

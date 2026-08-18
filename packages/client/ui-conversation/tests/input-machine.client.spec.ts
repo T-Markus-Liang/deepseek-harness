@@ -4,11 +4,13 @@
  * guard, anti-backwash), plus the occurrence table (shift / whole-chip
  * deletion / same-name independence), the self-managed undo log (typing
  * coalescing, paste two-stage undo, redo chain), consume-token guards, the
- * paste attempt lifecycle, projectClipboard, and the decoration projection.
- * Pure event sequences — no React, no DOM, no ambient clock.
+ * paste attempt lifecycle, projectClipboard, the sent-message history recall
+ * (recording, dedup, ↑/↓ browsing, draft restoration), and the decoration
+ * projection. Pure event sequences — no React, no DOM, no ambient clock.
  */
 import { describe, expect, it } from 'vitest'
 import type { CommandClaim, ReferenceInsert, TokenSpan } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
+import { HISTORY_LIMIT } from '../src/client/input/contract.ts'
 import type { InputEffect, SubmitAttempt } from '../src/client/input/contract.ts'
 import { InputMachine, PLACEHOLDER, projectClipboard } from '../src/client/input/machine.ts'
 import { deriveDecorations, scanTextRefs } from '../src/client/input/decorations.ts'
@@ -44,6 +46,12 @@ function enterAdjudicating(m: InputMachine, draft: string, mode: 'queue' | 'stee
   m.dispatch({ type: 'draft-changed', draft })
   const fx = m.dispatch({ type: 'enter', mode })
   return effectAt(fx, 0, 'adjudicate').attempt
+}
+
+/** Drive one ordinary committed plain-text send into the history stack. */
+function sendCommitted(m: InputMachine, text: string): void {
+  m.dispatch({ type: 'draft-changed', draft: text })
+  m.dispatch({ type: 'send-committed' })
 }
 
 /** Drive plain → claimed → submitting and hand back attempt + claim. */
@@ -824,5 +832,149 @@ describe('input-machine: per-session isolation', () => {
     a.dispatch({ type: 'submit-settled', attempt, ok: true })
     expect(a.state).toMatchObject({ phase: 'plain', draft: '' })
     expect(b.state).toMatchObject({ phase: 'claimed', draft: '/model ' })
+  })
+})
+
+describe('input-machine: sent-message history recall', () => {
+  it('↑/↓ on an empty history are no-ops that leave the draft untouched', () => {
+    const m = new InputMachine()
+    m.dispatch({ type: 'draft-changed', draft: 'work in progress' })
+    const rev = m.state.draftRev
+    expect(m.dispatch({ type: 'history-prev' })).toEqual([])
+    expect(m.dispatch({ type: 'history-next' })).toEqual([])
+    expect(m.state).toMatchObject({ draft: 'work in progress', historyIndex: -1, historyDraft: '' })
+    expect(m.state.history).toEqual([])
+    expect(m.state.draftRev).toBe(rev)
+  })
+
+  it('send-committed records the projected plain text and clears the draft like a commit', () => {
+    const m = new InputMachine()
+    sendCommitted(m, 'first message')
+    expect(m.state.history).toEqual(['first message'])
+    expect(m.state.draft).toBe('')
+    // The send is a commit: undo must not resurrect sent content.
+    expect(m.dispatch({ type: 'undo' })).toEqual([])
+    sendCommitted(m, 'second message')
+    expect(m.state.history).toEqual(['first message', 'second message'])
+  })
+
+  it('send-committed records the clipboard projection, never the placeholder draft', () => {
+    const m = new InputMachine()
+    m.dispatch({ type: 'draft-changed', draft: 'see @wor now' })
+    m.dispatch({ type: 'insert-ref', reference: refOf('worker-1', 'subagent'), span: spanOf(m, 4, 8) })
+    m.dispatch({ type: 'send-committed' })
+    expect(m.state.history).toEqual(['see /worker-1 now'])
+  })
+
+  it('consecutive identical sends collapse into one history entry', () => {
+    const m = new InputMachine()
+    sendCommitted(m, 'same')
+    sendCommitted(m, 'same')
+    expect(m.state.history).toEqual(['same'])
+  })
+
+  it('blank and whitespace-only sends record nothing', () => {
+    const m = new InputMachine()
+    sendCommitted(m, '   \n ')
+    expect(m.state.history).toEqual([])
+  })
+
+  it('↑ from a fresh draft enters browsing: saves the draft and jumps to the newest entry', () => {
+    const m = new InputMachine()
+    sendCommitted(m, 'old')
+    sendCommitted(m, 'new')
+    m.dispatch({ type: 'draft-changed', draft: 'unsent draft' })
+    m.dispatch({ type: 'history-prev' })
+    expect(m.state).toMatchObject({ historyIndex: 1, draft: 'new', historyDraft: 'unsent draft' })
+  })
+
+  it('repeated ↑ walks back to the oldest entry and stops at index 0', () => {
+    const m = new InputMachine()
+    for (const text of ['a', 'b', 'c']) sendCommitted(m, text)
+    m.dispatch({ type: 'history-prev' })
+    m.dispatch({ type: 'history-prev' })
+    m.dispatch({ type: 'history-prev' })
+    expect(m.state).toMatchObject({ historyIndex: 0, draft: 'a' })
+    // At the oldest entry another ↑ is a no-op.
+    m.dispatch({ type: 'history-prev' })
+    expect(m.state).toMatchObject({ historyIndex: 0, draft: 'a' })
+  })
+
+  it('↓ from a browsed entry steps forward toward the newest', () => {
+    const m = new InputMachine()
+    for (const text of ['a', 'b', 'c']) sendCommitted(m, text)
+    m.dispatch({ type: 'history-prev' })
+    m.dispatch({ type: 'history-prev' }) // now at index 1 ('b')
+    m.dispatch({ type: 'history-next' }) // index 2 ('c')
+    expect(m.state).toMatchObject({ historyIndex: 2, draft: 'c' })
+  })
+
+  it('↓ past the newest entry restores the saved draft and its occurrences', () => {
+    const m = new InputMachine()
+    sendCommitted(m, 'a')
+    sendCommitted(m, 'b')
+    // The base draft carries a chip; entering browsing saves it with its occurrences.
+    m.dispatch({ type: 'draft-changed', draft: 'see @wor' })
+    m.dispatch({ type: 'insert-ref', reference: refOf('worker-1', 'subagent'), span: spanOf(m, 4, 8) })
+    expect(m.state.draft).toBe(`see ${P} `)
+    m.dispatch({ type: 'history-prev' }) // → 'b' (index 1)
+    m.dispatch({ type: 'history-prev' }) // → 'a' (index 0)
+    m.dispatch({ type: 'history-next' }) // → 'b' (index 1)
+    m.dispatch({ type: 'history-next' }) // past newest → restore the base draft
+    expect(m.state).toMatchObject({ historyIndex: -1, draft: `see ${P} ` })
+    expect(m.state.occurrences).toEqual([expect.objectContaining({ ref: 'worker-1', offset: 4 })])
+  })
+
+  it('a user edit while browsing drops the history cursor back to normal mode', () => {
+    const m = new InputMachine()
+    sendCommitted(m, 'a')
+    m.dispatch({ type: 'draft-changed', draft: 'base' })
+    m.dispatch({ type: 'history-prev' })
+    expect(m.state.historyIndex).toBe(0)
+    m.dispatch({ type: 'draft-changed', draft: 'base edited' })
+    expect(m.state.historyIndex).toBe(-1)
+    expect(m.state.draft).toBe('base edited')
+    expect(m.state.historyDraft).toBe('base')
+  })
+
+  it('the history stack is capped at HISTORY_LIMIT, evicting the oldest', () => {
+    const m = new InputMachine()
+    for (let i = 0; i < HISTORY_LIMIT + 1; i += 1) {
+      m.dispatch({ type: 'draft-changed', draft: `msg ${i}` })
+      m.dispatch({ type: 'send-committed' })
+    }
+    expect(m.state.history).toHaveLength(HISTORY_LIMIT)
+    expect(m.state.history[0]).toBe('msg 1')
+    expect(m.state.history[HISTORY_LIMIT - 1]).toBe(`msg ${HISTORY_LIMIT}`)
+  })
+
+  it.each([
+    {
+      phase: 'claimed',
+      enter: (m: InputMachine) => {
+        m.dispatch({ type: 'draft-changed', draft: '/go' })
+        m.dispatch({ type: 'begin-command', claim: claimOf('goal'), span: spanOf(m, 0, 3) })
+      },
+    },
+    {
+      phase: 'adjudicating',
+      enter: (m: InputMachine) => {
+        enterAdjudicating(m, '/goal x')
+      },
+    },
+    {
+      phase: 'submitting',
+      enter: (m: InputMachine) => {
+        enterSubmitting(m, 'goal', 'x')
+      },
+    },
+  ])('history ↑/↓ are no-ops while $phase', ({ enter }) => {
+    const m = new InputMachine()
+    enter(m)
+    const draft = m.state.draft
+    expect(m.dispatch({ type: 'history-prev' })).toEqual([])
+    expect(m.dispatch({ type: 'history-next' })).toEqual([])
+    expect(m.state.draft).toBe(draft)
+    expect(m.state.historyIndex).toBe(-1)
   })
 })
