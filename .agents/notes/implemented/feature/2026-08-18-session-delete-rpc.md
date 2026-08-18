@@ -22,6 +22,6 @@ Deletion is one unary RPC, `workspace.deleteSession`, guarded by three typed fai
 
 ## Consequences
 
-Any caller with RPC access can irreversibly delete a detached, top-level session; live and subagent-owned sessions are structurally protected. Blank but persisted sessions delete like any other. The GUI does not yet expose a delete affordance — the RPC is host-side only until a client surface opts in.
+Any caller with RPC access can irreversibly delete a detached, top-level session; live and subagent-owned sessions are structurally protected. Blank but persisted sessions delete like any other. The GUI exposes the delete affordance through the session row's actions and right-click menus (删除, danger-styled) behind an irreversible-delete confirmation dialog; on success the client runtime (`SessionRuntime.deleteSession`) removes the row from the list store and clears a selection that pointed at it, while `unaccountSession`'s state change re-pushes the archive set to every tab through the existing `host/archived-sessions-changed` frame. Blank rows carry no verbs, so their right-click stays inert.
 
-`pnpm run typecheck`, `pnpm run test:gui` (273 files, 3,786 tests), the apiproxy + session suites (62 files, 1,304 tests), and `pnpm run doc-sync` (28 gates) all pass with the wiring complete.
+`pnpm run typecheck`, `pnpm run test:gui` (273 files, 3,786+ tests, including the new session-delete dialog, right-click, and list-removal cases), the apiproxy + session suites (62 files, 1,304 tests), and `pnpm run doc-sync` (28 gates) all pass with the wiring complete.

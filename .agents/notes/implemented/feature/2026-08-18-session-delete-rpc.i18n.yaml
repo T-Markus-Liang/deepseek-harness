@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-18-session-delete-rpc.md
-2026-08-18-session-delete-rpc.md: f3db688f6a0494d8366041d1522073e4bff5ef49
-2026-08-18-session-delete-rpc.zh.md: 8d8cdeae520bd93523fe352d6a0bbabde4a1ee37
+2026-08-18-session-delete-rpc.md: 4bfb6753da578a23ab3afe48ff0012dbe17b52d3
+2026-08-18-session-delete-rpc.zh.md: d2ec472c7935577151d289df90dd8b046f3de7a5

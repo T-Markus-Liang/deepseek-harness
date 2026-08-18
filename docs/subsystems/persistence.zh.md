@@ -369,6 +369,18 @@ abstract readFrom(id: SessionId, fromSeq: number, signal?: AbortSignal): Promise
 abstract destroy(id: SessionId): Promise<void>
 
 /**
+ * Relocate a stored session to a new project directory by rewriting its
+ * header `cwd` and moving the durable artifact to the path derived from
+ * `newCwd`. Idempotent: an id with no stored artifact resolves silently.
+ * The caller MUST guarantee the session is not active — the coordinator
+ * rejects relocating a live session or one still carrying in-memory
+ * persistence state.
+ * @param id - persisted session id to relocate.
+ * @param newCwd - absolute path of the new project directory.
+ */
+abstract relocate(id: SessionId, newCwd: string): Promise<void>
+
+/**
  * Lightweight listing from metadata, without a full-log parse.
  * @param signal - optional cancellation for backend listing work.
  * @returns one header per materialized session.

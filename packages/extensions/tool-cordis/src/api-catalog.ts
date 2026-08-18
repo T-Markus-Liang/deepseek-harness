@@ -1074,6 +1074,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'id', description: 'persisted session id to destroy.' }],
       },
       {
+        signature: 'abstract relocate(id: SessionId, newCwd: string): Promise<void>',
+        description: 'Relocate a stored session to a new project directory by rewriting its header `cwd` and moving the durable artifact to the path derived from `newCwd`. Idempotent: an id with no stored artifact resolves silently. The caller MUST guarantee the session is not active — the coordinator rejects relocating a live session or one still carrying in-memory persistence state.',
+        parameters: [{ name: 'id', description: 'persisted session id to relocate.' }, { name: 'newCwd', description: 'absolute path of the new project directory.' }],
+      },
+      {
         signature: 'abstract list(signal?: AbortSignal): Promise<SessionHeader[]>',
         description: 'Lightweight listing from metadata, without a full-log parse.',
         parameters: [{ name: 'signal', description: 'optional cancellation for backend listing work.' }],
@@ -2203,6 +2208,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: 'unaccountSession(sessionId: SessionId): Promise<void>',
         description: 'Remove a session from every workspace\'s accounting and from the archive set. Idempotent: an unknown session resolves without error.',
         parameters: [{ name: 'sessionId', description: 'The session to unaccount.' }],
+      },
+      {
+        signature: 'moveSession(sessionId: SessionId, targetWorkspaceId: WorkspaceId): Promise<void>',
+        description: 'Relocate a session to a different workspace: rewrite the persisted header `cwd` to the target workspace\'s path, update the in-memory path mapping, detach from every workspace, and attach to the target. The session must not be live — the persistence coordinator rejects relocating a live session.',
+        parameters: [{ name: 'sessionId', description: 'The session to move.' }, { name: 'targetWorkspaceId', description: 'The workspace to move the session into.' }],
       },
       {
         signature: 'async resolveByPath(path: string): Promise<Workspace | undefined>',
