@@ -103,6 +103,7 @@ export function InputBar({
       : `${promptError.error.message} (${promptError.error.code})`)
   }, [promptError, showToast, t, imageLimits])
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
+  const imagePickerRef = useRef<HTMLInputElement | null>(null)
   const cardRef = useRef<HTMLDivElement | null>(null)
   const dragDepthRef = useRef(0)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -492,6 +493,15 @@ export function InputBar({
     if (rejected !== null) showToast(rejected)
   }, [addImages, attachments, imageLimits, showToast, t])
 
+  // Explicit image-picker button: the hidden input feeds the same intake
+  // pipeline as paste/drop, so limits and format checks apply identically.
+  // The value reset lets the user re-pick the same file after a rejection.
+  const onPickImages = (event: ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(event.target.files ?? [])
+    intakeImages(files)
+    event.target.value = ''
+  }
+
   // Whole-page file-drop intake (DeepSeek Chat behavior): the listeners live
   // on the document so a drop anywhere over the window adds images, not only
   // over the composer card. Safe as document-level state: the composer-bar
@@ -789,6 +799,30 @@ export function InputBar({
                 <IconPlusOutline16 size={14} />
               </button>
             </Tooltip>
+            <Tooltip label={t('image.pick')} side="top" delayMs={500}>
+              <button
+                type="button"
+                className={css.add}
+                aria-label={t('image.pick')}
+                disabled={locked || addImages === undefined}
+                onMouseDown={keepFocus}
+                onClick={() => { imagePickerRef.current?.click() }}
+              >
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden>
+                  <rect x="1.5" y="3" width="13" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                  <circle cx="5.5" cy="6.5" r="1.5" fill="currentColor" />
+                  <path d="M2.5 12.5L6 8.5L8.5 10.5L11 7.5L13.5 12.5Z" fill="currentColor" />
+                </svg>
+              </button>
+            </Tooltip>
+            <input
+              ref={imagePickerRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={onPickImages}
+            />
             <div className={css.modes}>
               {accessSelect}
               {renderSlot('conversation.input.plan', { locked })}
