@@ -26,6 +26,7 @@
 
 ## 已知限制与延期工作
 
+- 固定的 `llm-verifier` 评分需要从 verifier backend 获取 token 级 top-20 logprobs，因此 backend（DeepSeek 官方 API，或任何暴露 logprobs 的 OpenAI 兼容服务器）必须返回它们。聚合/中转端点通常拒绝 `logprobs` 参数，或接受参数但不返回数据；面对这类 backend，每次选择都会退化为上游的 neutral tie（所有候选分数相等），并且不会记录任何用量。在依赖排名结果前，请先用一次真实的 `select()` 验证 backend。
 - Python 环境由部署提供；本包不会执行 `pip`。
 - 每次选择启动一个进程，不保留预热 client pool。
 - 每个实例只转发一个凭据引用和可选 OpenAI-compatible base URL。

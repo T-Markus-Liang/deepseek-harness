@@ -26,6 +26,7 @@ No direct invalidation in the conversation model. The independent verifier backe
 
 ## Known Limitations and Deferred Work
 
+- The pinned `llm-verifier` scoring consumes token-level top-20 logprobs from the verifier backend, so the backend (the DeepSeek official API, or any OpenAI-compatible server exposing logprobs) must return them. Aggregator and relay endpoints commonly reject the `logprobs` parameter or accept it without returning data; against such backends every selection degrades to the upstream neutral tie (equal candidate scores) and no usage is recorded. Validate the backend with a real `select()` before relying on rankings.
 - Python environment provisioning is deployment-owned; this package does not run `pip`.
 - One process is started per selection, so no warm client pool is retained.
 - The provider forwards one credential reference and optional OpenAI-compatible base URL per instance.
