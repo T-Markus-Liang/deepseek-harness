@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>斗地主</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-table">
+    <div class="game-layout">
+      <!-- 顶部栏 -->
+      <div class="top-bar">
+        <div class="logo">🃏 斗地主</div>
+        <div class="top-buttons">
+          <button id="bgm-toggle" class="btn-bgm">🔇 音乐</button>
+          <input type="range" id="bgm-volume" class="volume-slider" min="0" max="1" step="0.05" value="0.35" style="display:none">
+          <button id="restart-btn" class="btn-restart">🔄 重新开始</button>
+        </div>
+      </div>
+      
+      <!-- 游戏主区域 -->
+      <div class="game-main">
+        <!-- 出牌记录（最顶部独立栏，不遮挡牌桌） -->
+        <div id="play-history">
+          <div class="history-title">📜 本局出牌记录</div>
+          <div class="history-list" id="history-list"></div>
+        </div>
+        
+        <!-- AI玩家 -->
+        <div class="ai-players">
+          <div id="player-2" class="player-area player-left">
+            <div class="player-info"></div>
+          </div>
+          <div id="player-1" class="player-area player-right">
+            <div class="player-info"></div>
+          </div>
+        </div>
+        
+        <!-- 中央区域 -->
+        <div class="center-area">
+          <!-- 状态信息 -->
+          <div id="game-status">斗地主</div>
+          
+          <!-- 信息面板 -->
+          <div id="info-panel">
+            <span>🃏 斗地主</span>
+          </div>
+          
+          <!-- 底牌 -->
+          <div id="landlord-cards"></div>
+          
+          <!-- 出牌区：真实打牌，出的牌凌乱堆在牌桌中间 -->
+          <div id="play-area">
+            <!-- 玩家前方展示位：出牌瞬间先在此展示（下方=人类/右侧=AI-1/左侧=AI-2） -->
+            <div id="play-front-0" class="play-front play-front-bottom"></div>
+            <div id="play-front-1" class="play-front play-front-right"></div>
+            <div id="play-front-2" class="play-front play-front-left"></div>
+            <!-- 中心散乱牌堆：所有已出的牌累积堆叠 -->
+            <div id="play-stack"></div>
+          </div>
+        </div>
+        
+        <!-- 人类玩家 -->
+        <div id="player-0" class="player-area" style="align-self:center; margin-bottom: 4px;">
+          <div class="player-info"></div>
+        </div>
+        
+        <!-- 手牌区 -->
+        <div id="hand-cards"></div>
+        
+        <!-- 控制按钮 -->
+        <div id="controls" class="hidden"></div>
+        
+        <!-- 叫地主控制 -->
+        <div id="bid-controls" class="hidden"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 脚本加载（按顺序） -->
+  <script src="js/cards.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
