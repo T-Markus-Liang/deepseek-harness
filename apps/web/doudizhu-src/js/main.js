@@ -199,9 +199,13 @@ function handleHumanPlay(cards) {
   
   isProcessing = true;
   
-  // 先说话（TTS 预热后即时播放），再出牌动画，保证同步
+  // 先说话（TTS 预热后即时播放），再出牌动画，保证同步；语音异常不能卡死流程
   const playType = detectType(cards);
-  speakHumanPlay();
+  try {
+    speakHumanPlay();
+  } catch (e) {
+    console.error('[人类出牌语音异常]', e);
+  }
   
   // 出牌动画
   renderer.animatePlayCards(0, cards);
@@ -240,8 +244,12 @@ function handleHumanPass() {
   
   isProcessing = true;
   
-  // 人类玩家过牌说话
-  speakHumanPass();
+  // 人类玩家过牌说话；语音异常不能卡死流程
+  try {
+    speakHumanPass();
+  } catch (e) {
+    console.error('[人类过牌语音异常]', e);
+  }
   
   const success = game.handlePlay(0, []);
   if (!success) {
@@ -371,51 +379,63 @@ function processAIBidding() {
   const delay = getAIBidDelay();
   
   setTimeout(() => {
-    if (game.phase !== 'bidding') {
-      isProcessing = false;
-      return;
-    }
-    
-    const success = game.handleBid(playerIndex, score);
-    if (!success) {
-      isProcessing = false;
-      return;
-    }
-    
-    // AI 说话
-    speakBid(player.name, score, player.voice);
-    
-    if (score > 0) {
-      renderer.showMessage(`${player.name} 叫了 ${score} 分`);
-    } else {
-      renderer.showMessage(`${player.name} 不叫`);
-    }
-    
-    if (game.phase === 'playing') {
-      // 地主确定，开始出牌
-      if (game.currentPlayer === 0) {
+    // 防御：AI 叫牌异常也不能卡死流程
+    try {
+      if (game.phase !== 'bidding') {
         isProcessing = false;
-        startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
         return;
-      } else {
-        setTimeout(() => {
-          isProcessing = false;
-          processAITurn();
-        }, 500);
       }
-      return;
-    }
-    
-    if (game.phase === 'bidding') {
-      // 继续叫地主（可能是人类或AI）
-      if (game.currentPlayer === 0) {
+      
+      const success = game.handleBid(playerIndex, score);
+      if (!success) {
         isProcessing = false;
+        return;
+      }
+      
+      // AI 说话
+      speakBid(player.name, score, player.voice);
+      
+      if (score > 0) {
+        renderer.showMessage(`${player.name} 叫了 ${score} 分`);
+      } else {
+        renderer.showMessage(`${player.name} 不叫`);
+      }
+      
+      if (game.phase === 'playing') {
+        // 地主确定，开始出牌
+        if (game.currentPlayer === 0) {
+          isProcessing = false;
+          startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
+          return;
+        } else {
+          setTimeout(() => {
+            isProcessing = false;
+            processAITurn();
+          }, 500);
+        }
+        return;
+      }
+      
+      if (game.phase === 'bidding') {
+        // 继续叫地主（可能是人类或AI）
+        if (game.currentPlayer === 0) {
+          isProcessing = false;
         startHumanTurnTimer(); // 轮到人类叫分，启动30秒倒计时
       } else {
         setTimeout(() => {
           isProcessing = false;
           processAIBidding();
         }, 300);
+      }
+    }
+    } catch (err) {
+      console.error('[AI叫牌异常]', err);
+      // 异常也要推进：清 isProcessing 并继续叫牌/出牌调度
+      if (game.phase === 'bidding' && game.currentPlayer !== 0) {
+        isProcessing = false;
+        setTimeout(() => processAIBidding(), 500);
+      } else {
+        isProcessing = false;
       }
     }
   }, delay);
@@ -442,71 +462,83 @@ function processAITurn() {
   const delay = getAIDelay();
   
   setTimeout(() => {
-    if (game.phase !== 'playing') {
-      isProcessing = false;
-      return;
-    }
-    
-    const cards = choosePlay(hand, lastPlay, lastPlayer, isLandlord, playerIndex, game.landlord, player.personality);
-    
-    const isPass = !cards || cards.length === 0;
-    
-    if (isPass) {
-      // 先说话再过牌
-      speakPass(player.name, player.voice);
-      
-      const success = game.handlePlay(playerIndex, []);
-      if (!success) {
+    // 防御：AI 回合处理中任何异常都不能让 isProcessing 卡死（否则游戏停摆）
+    try {
+      if (game.phase !== 'playing') {
         isProcessing = false;
         return;
       }
       
-      renderer.showMessage(`${player.name}: 过`);
+      const cards = choosePlay(hand, lastPlay, lastPlayer, isLandlord, playerIndex, game.landlord, player.personality);
       
-      if (game.phase === 'ended') {
-        isProcessing = false;
-        return;
-      }
+      const isPass = !cards || cards.length === 0;
       
-      if (game.currentPlayer === 0) {
-        resetHintState();
-        startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
-        isProcessing = false;
-      } else {
-        setTimeout(() => {
+      if (isPass) {
+        // 先说话再过牌
+        speakPass(player.name, player.voice);
+        
+        const success = game.handlePlay(playerIndex, []);
+        if (!success) {
           isProcessing = false;
-          processAITurn();
-        }, 500);
-      }
-    } else {
-      // 先说话（TTS 即时播放）再出牌动画，保证同步
-      const type = detectType(cards);
-      speakPlay(player.name, type ? type.type : '', cards, player.voice);
-      
-      renderer.animatePlayCards(playerIndex, cards);
-      
-      const success = game.handlePlay(playerIndex, cards);
-      if (!success) {
-        isProcessing = false;
-        return;
-      }
-      
-      renderer.showMessage(`${player.name} 出牌`);
-      
-      if (game.phase === 'ended') {
-        isProcessing = false;
-        return;
-      }
-      
-      if (game.currentPlayer === 0) {
-        resetHintState();
-        startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
-        isProcessing = false;
-      } else {
-        setTimeout(() => {
+          return;
+        }
+        
+        renderer.showMessage(`${player.name}: 过`);
+        
+        if (game.phase === 'ended') {
           isProcessing = false;
-          processAITurn();
-        }, 500);
+          return;
+        }
+        
+        if (game.currentPlayer === 0) {
+          resetHintState();
+          startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
+          isProcessing = false;
+        } else {
+          setTimeout(() => {
+            isProcessing = false;
+            processAITurn();
+          }, 500);
+        }
+      } else {
+        // 先说话（TTS 即时播放）再出牌动画，保证同步
+        const type = detectType(cards);
+        speakPlay(player.name, type ? type.type : '', cards, player.voice);
+        
+        renderer.animatePlayCards(playerIndex, cards);
+        
+        const success = game.handlePlay(playerIndex, cards);
+        if (!success) {
+          isProcessing = false;
+          return;
+        }
+        
+        renderer.showMessage(`${player.name} 出牌`);
+        
+        if (game.phase === 'ended') {
+          isProcessing = false;
+          return;
+        }
+        
+        if (game.currentPlayer === 0) {
+          resetHintState();
+          startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
+          isProcessing = false;
+        } else {
+          setTimeout(() => {
+            isProcessing = false;
+            processAITurn();
+          }, 500);
+        }
+      }
+    } catch (err) {
+      console.error('[AI回合异常]', err);
+      // 异常也要推进游戏：清 isProcessing 并继续调度下一回合
+      if (game.phase === 'playing' && game.currentPlayer !== 0) {
+        isProcessing = false;
+        setTimeout(() => processAITurn(), 600);
+      } else {
+        isProcessing = false;
       }
     }
   }, delay);

@@ -192,8 +192,8 @@ class Renderer {
 
   /**
    * 渲染出牌区（真实打牌模拟）
-   * 出的牌带随机偏移/旋转凌乱地堆在牌桌中间，永久累积保留；
-   * 一圈结束（两人 pass）后牌仍留在桌上，直到新一局/游戏结束才清空。
+   * 一轮内：每家出的牌停留在各自前方展示位（人类=下方/AI-1=右侧/AI-2=左侧），整轮可见；
+   * 下一轮开始（两人 pass 触发 lastPlay 清空）时，把上一轮各家面前的牌归入桌子中心散乱牌堆。
    */
   renderPlayArea(state) {
     // 新一局（叫牌阶段）或游戏结束：清空出牌区
@@ -202,13 +202,16 @@ class Renderer {
       return;
     }
     const lastPlay = state.lastPlay || null;
-    const key = this._playKey(lastPlay);
-    if (key === this._displayedPlayKey) return; // 已在 animatePlayCards 流程中
+    // 新一轮开始（上一轮结束，lastPlay 被清空）：把上一轮各家前方的牌归入中心牌堆
     if (!lastPlay) {
-      // 一圈结束（两人 pass 触发新一轮）：牌继续永久留在桌上，不清空
+      if (this._roundFrontNotEmpty()) {
+        this._collectFrontToStack();
+      }
       return;
     }
-    // lastPlay 变化但未经过 animatePlayCards（防御性）：走完整"前方展示→汇入中心"流程
+    const key = this._playKey(lastPlay);
+    if (key === this._displayedPlayKey) return; // 已在 animatePlayCards 流程中
+    // lastPlay 变化但未经过 animatePlayCards（防御性）：走"前方展示"流程
     this.animatePlayCards(lastPlay.player, lastPlay.cards);
     this._displayedPlayKey = key;
   }
@@ -566,9 +569,9 @@ class Renderer {
 
   /**
    * 出牌动画（复刻真实打牌）：
-   * 1) 牌先出现在出牌者前方（人类=下方 / AI-1=右侧 / AI-2=左侧）展示这一手
-   * 2) 停留约 900ms 让人看清谁出了什么
-   * 3) 然后飞向桌子中心，加入散乱牌堆（永久累积）
+   * 1) 牌出现在出牌者前方（人类=下方 / AI-1=右侧 / AI-2=左侧）展示这一手
+   * 2) 整轮停留在各自前方（不清空、不自动消失）
+   * 3) 下一轮开始时由 renderPlayArea 统一归入中心散乱牌堆
    */
   animatePlayCards(playerIndex, cards) {
     if (this.el.playStack == null) return;
@@ -576,22 +579,13 @@ class Renderer {
     // 记录到顶部出牌历史
     this.addToHistory(playerIndex, cards);
     
-    // 1) 在出牌者前方展示这一手
+    // 在出牌者前方展示这一手（覆盖该玩家上一轮已归堆的旧牌，只保留当前这手）
     const frontEl = this.el['playFront' + playerIndex];
     if (frontEl) {
       this._showPlayFront(frontEl, cards);
     }
-    
-    // 2) 延迟后汇入中心散乱牌堆
-    const key = playerIndex + '|' + this._cardsKey(cards);
-    const t = detectType(cards);
-    setTimeout(() => {
-      // 3) 飞向中心牌堆
-      this._flyFrontToStack(frontEl, playerIndex, cards, t ? t.type : null);
-      this._displayedPlayKey = key;
-      // 牌堆上限控制：超过 MAX_HANDS 手时最旧一手淡出移除
-      this._trimStack();
-    }, 900);
+    // 记录已展示，避免 renderPlayArea 重复触发同一手
+    this._displayedPlayKey = playerIndex + '|' + this._cardsKey(cards);
   }
 
   /**
@@ -605,6 +599,9 @@ class Renderer {
       const colorClass = isRed ? 'card-red' : 'card-black';
       const cardEl = document.createElement('div');
       cardEl.className = 'card card-animate-in';
+      // 记录牌数据，供新一轮归堆时 _readFrontCards 反解
+      cardEl.setAttribute('data-rank', String(card.rank));
+      cardEl.setAttribute('data-suit', card.suit);
       if (card.suit === 'joker') {
         cardEl.classList.add('card-joker', card.rank === 17 ? 'card-red' : 'card-black');
         cardEl.innerHTML = `
@@ -631,16 +628,51 @@ class Renderer {
   }
 
   /**
-   * 把展示位的牌飞向中心牌堆：淡出展示位，同时把同款牌加入中心散乱牌堆
+   * 检查是否还有玩家前方展示着本轮的牌
    */
-  _flyFrontToStack(frontEl, playerIndex, cards, type) {
-    // 展示位淡出
-    if (frontEl) {
-      frontEl.classList.remove('show');
-      setTimeout(() => { if (frontEl) frontEl.innerHTML = ''; }, 250);
+  _roundFrontNotEmpty() {
+    for (let i = 0; i < 3; i++) {
+      const frontEl = this.el['playFront' + i];
+      if (frontEl && frontEl.querySelectorAll('.card').length > 0) return true;
     }
-    // 中心牌堆加入这一手（散乱堆叠）
-    this._addToStack(playerIndex, cards, type);
+    return false;
+  }
+
+  /**
+   * 把各家前方展示的牌归入中心散乱牌堆（下一轮开始调用）
+   * 依次加入中心堆（随机位置/旋转散乱堆叠），然后清空所有前方展示位
+   */
+  _collectFrontToStack() {
+    for (let i = 0; i < 3; i++) {
+      const frontEl = this.el['playFront' + i];
+      if (!frontEl) continue;
+      const cards = this._readFrontCards(frontEl);
+      if (cards.length > 0) {
+        const t = detectType(cards);
+        this._addToStack(i, cards, t ? t.type : null);
+      }
+      frontEl.classList.remove('show');
+      frontEl.innerHTML = '';
+    }
+    // 牌堆上限控制
+    this._trimStack();
+  }
+
+  /**
+   * 从前方展示位读取牌数据（从 DOM 反解，补充 display 字段供 cardDisplay 显示）
+   */
+  _readFrontCards(frontEl) {
+    const cards = [];
+    const cardEls = frontEl.querySelectorAll('.card');
+    for (const el of cardEls) {
+      const rank = el.getAttribute('data-rank');
+      const suit = el.getAttribute('data-suit');
+      if (rank != null && suit != null) {
+        const r = parseInt(rank, 10);
+        cards.push({ rank: r, suit, display: RANK_DISPLAY[r] || (r === 16 ? '小王' : r === 17 ? '大王' : String(r)) });
+      }
+    }
+    return cards;
   }
 
   /**

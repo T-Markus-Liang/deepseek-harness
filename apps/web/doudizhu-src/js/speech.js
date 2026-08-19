@@ -356,6 +356,7 @@ function speak(text, rate = 1.0, pitch = 1.0, voiceKey = 'xiaoxiao', roleName = 
 }
 
 function _randomLine(lines) {
+  if (!lines || !lines.length) return '出牌！';
   return lines[Math.floor(Math.random() * lines.length)];
 }
 
@@ -366,7 +367,8 @@ function _roleLines(playerName, cosyVoice) {
   // 新角色（随机对手）：按 voice 映射到现有语音库（台词库复用）
   if (cosyVoice === 'laohu') return ROLE_CONFIG['老胡'];
   if (cosyVoice === 'xiaodai') return ROLE_CONFIG['小呆'];
-  return ROLE_CONFIG['你'];
+  // 兜底：老胡台词库完整（含全部牌型行），避免落到只有 play/pass 的'你'导致牌型行缺失
+  return ROLE_CONFIG['老胡'];
 }
 
 /** AI 出牌说话（按角色方言/性格） */
