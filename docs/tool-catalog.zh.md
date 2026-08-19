@@ -32,8 +32,10 @@
 | `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list` | `ctx.tools`、`ctx.sessions`、Session 持久化、未来创建的 live 根 Agent | `tool/call`、`schedule/change create or delete`、`tool/result` | - | 仅在选择启用的 Schedule 插件加载后创建的 live 根 Agent scope 内注册。版本 1 接受 after_seconds、显式绝对 at 和有界固定速率 every_seconds，并披露 session-local 交付；管理读取与变更必须通过共享的 Session 持久化 barrier。 |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
+| `@deepseek-ai/dsh-tool-best-of-n` | `best_of_n` | `ctx.tools`、`ctx.subagents`、`ctx.subprocess`、`ctx.verifier`、`a calling Agent with a clean Git workspace` | `tool/call`、`candidate Session events`、`winning filesystem patch`、`tool/result` | - | 基于支持工作区的 one-shot subagent provider 的可选固定编码工作流。它在同一个干净父级 HEAD 创建 detached Git worktree，对完整本地子 Session 排名，只应用胜者 patch，并移除落选 worktree。 |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`、`ctx.agents`、`ctx.skills` | `tool/call`、`tool/result`、`user/message replacement catalogs via agent.inject()` | - | - |
 | `@deepseek-ai/dsh-tool-session-query` | `session_event_read`、`session_event_search`、`session_event_trace`、`session_search`、`session_trace` | `ctx.tools`、`ctx.systemPrompt`、`ctx.sessionQuery`、`a calling Agent for workspace authority` | `tool/call`、`tool/result` | - | 这 5 个只读工具会隐藏提供方游标，并根据不可变的调用 agent 会话为每个结果授权。该包需要选择启用；需要强制截止时间或限制行内输出的组合还会挂载通用超时或 spill 策略。 |
+| `@deepseek-ai/dsh-tool-verify-candidates` | `verify_candidates` | `ctx.tools`、`ctx.sessionPersistence`、`ctx.verifier` | `tool/call`、`tool/result` | - | 对调用方工作区内已有持久化 Session id 的完整当前消息 surface 排名；候选轨迹从持久化存储读取，不会复制进父级对话。 |
 | `@deepseek-ai/dsh-tool-subagent` | `subagent` | `ctx.tools`、`ctx.subagents`、`ctx.systemPrompt` | `tool/call`、`tool/result`、`child session events through the chosen provider` | `subagent`、`subagent_fork` | 注册的工具名称取决于加载时 `toolName` 配置（默认为 `subagent`）；上述 schema 对应默认值。随产品发布的组合会为每个 subagent 后端加载一次该包，因此模型还会看到绑定到 fork 后端的 `subagent_fork`。每个实例的描述、`run_in_background` 参数与 system prompt 策略取决于它自己的 `backgroundMode` 和 `enableRunInBackground`，因此两个随附 schema 并不相同：`subagent` 为 `continuable`，省略参数时默认后台运行，并由 runtime 自动投递结束结果；`subagent_fork` 保持 `one-shot`，省略参数时默认前台运行。详见 `packages/bundle/base/cordis.patch.yml` 和 `examples/acp-agent/cordis.yml`。 |
 | `@deepseek-ai/dsh-tool-subagent-control` | `get_agent_result`、`interrupt_agent`、`list_agents`、`send_message` | `ctx.tools`、`ctx.subagents`、`ctx.agents and ctx.sessionProjections (list_agents only)` | `tool/call`、`tool/result`、`child session events through ctx.subagents` | - | 这些是控制可继续后台 subagent 的全局命名工具：绑定提供方的 `tool-subagent` 实例注册不同的委派工具；本包注册一次 `send_message`、`get_agent_result` 和 `interrupt_agent`，另由 `list_agents` 通过单独加载的 `/list-agents` 插件提供，其目录行使用 sessionProjections 和实时 Agent 注册表。 |
 | `@deepseek-ai/dsh-tool-subagent-report` | `report` | `ctx.subagents`、`ctx.systemPrompt`、`a live continuable in-process child Agent` | `tool/call`、`tool/result`、`a user-role message in the direct parent session` | - | 按可继续的进程内子级注册，而非全局注册，因此该 schema 仅在这种子级内部可见，并且不受其全局 `toolFilter` 影响。同一份贡献还会安装子级作用域的 `tool:report` 系统提示词 section，本目录不渲染该 section。面向父级的 `send_message` 工具单独安装。 |
@@ -1212,6 +1214,63 @@ lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，�
 
 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。
 
+<a id="deepseek-aidsh-tool-best-of-n"></a>
+
+## `@deepseek-ai/dsh-tool-best-of-n`
+
+### `best_of_n`
+
+在隔离的 detached Git worktree 中运行多个独立编码候选，使用配置的 verifier 对完整 Session 排名，只把胜者 patch 应用到干净父 worktree，并丢弃落选 worktree。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "objective": {
+      "type": "string",
+      "description": "One coding task for every candidate."
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Independent criteria used to rank candidate trajectories.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      }
+    },
+    "candidates": {
+      "type": "integer",
+      "description": "Number of independent candidates to generate."
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Deterministic verifier tournament seed; defaults to 0."
+    }
+  },
+  "required": [
+    "objective",
+    "criteria",
+    "candidates"
+  ]
+}
+```
+
+来源：[`packages/verifier/tool-best-of-n/src/index.ts`](../packages/verifier/tool-best-of-n/src/index.ts)
+
+基于支持工作区的 one-shot subagent provider 的可选固定编码工作流。它在同一个干净父级 HEAD 创建 detached Git worktree，对完整本地子 Session 排名，只应用胜者 patch，并移除落选 worktree。
+
 <a id="deepseek-aidsh-tool-skill"></a>
 
 ## `@deepseek-ai/dsh-tool-skill`
@@ -1471,6 +1530,66 @@ lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，�
 来源：[`packages/session-query/tool-session-query/src/index.ts`](../packages/session-query/tool-session-query/src/index.ts)
 
 这 5 个只读工具会隐藏提供方游标，并根据不可变的调用 agent 会话为每个结果授权。该包需要选择启用；需要强制截止时间或限制行内输出的组合还会挂载通用超时或 spill 策略。
+
+<a id="deepseek-aidsh-tool-verify-candidates"></a>
+
+## `@deepseek-ai/dsh-tool-verify-candidates`
+
+### `verify_candidates`
+
+对调用方工作区内尝试同一任务的已有候选 Session 排名。按评分顺序提供持久化 Session id；工具读取各自当前的模型可见轨迹，并返回胜者和完整排名。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "problem": {
+      "type": "string",
+      "description": "The task every candidate attempted."
+    },
+    "candidateSessionIds": {
+      "type": "array",
+      "description": "Distinct durable candidate Session ids, in stable input order.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Independent evaluation criteria.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      }
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Deterministic tournament seed; defaults to 0."
+    }
+  },
+  "required": [
+    "problem",
+    "candidateSessionIds",
+    "criteria"
+  ]
+}
+```
+
+来源：[`packages/verifier/tool-verify-candidates/src/index.ts`](../packages/verifier/tool-verify-candidates/src/index.ts)
+
+对调用方工作区内已有持久化 Session id 的完整当前消息 surface 排名；候选轨迹从持久化存储读取，不会复制进父级对话。
 
 <a id="deepseek-aidsh-tool-subagent"></a>
 

@@ -12,7 +12,7 @@ The shared driver owns depth checking, persona and tool-filter setup, structured
 
 ## Capabilities
 
-Spawn advertises `{ outputSchema: true, depthLimit: true, toolFilter: true, persona: true }` because it controls the child's creation window and can enforce all four features.
+Spawn advertises `{ outputSchema: true, depthLimit: true, toolFilter: true, persona: true, workspaceCwd: true }` because it controls the child's creation window and can enforce all five features. `workspaceCwd` replaces the inherited parent cwd in the child Session header.
 
 ## Config
 

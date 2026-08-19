@@ -2047,6 +2047,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'verifier',
+    summary: 'Verifier capability implemented by an external scoring backend.',
+    description: 'Verifier capability implemented by an external scoring backend.',
+    methods: [
+      {
+        signature: 'abstract select(request: VerifierSelectRequest): Promise<VerifierSelection>',
+        description: 'Rank complete trajectories for one task.',
+        parameters: [{ name: 'request', description: 'explicit candidates, criteria, model, tournament settings, and cancellation.' }],
+        returns: 'the validated best-first selection.',
+      },
+    ],
+  },
+  {
     key: 'web',
     summary: 'The web access service.',
     description: 'The web access service. Registered as `ctx.web` (one instance per context).\n\nSelection semantics (resolved at execution time, never order-dependent):\n\n- A configured id that is registered and `available()` → that provider.\n- A configured id not registered → `WEB_PROVIDER_CONFIGURED_MISSING`.\n- A configured id registered but unavailable → `WEB_PROVIDER_CONFIGURED_UNAVAILABLE`.\n- No id configured, exactly one registered usable provider → that provider.\n- No id configured, multiple usable providers → `WEB_PROVIDER_AMBIGUOUS`.\n- No id configured, no usable provider → `WEB_PROVIDER_UNAVAILABLE`.',
@@ -4168,7 +4181,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SubagentCapabilities',
-    declaration: 'export interface SubagentCapabilities {\n    readonly outputSchema: boolean;\n    readonly depthLimit: boolean;\n    readonly toolFilter: boolean;\n    readonly persona: boolean;\n}',
+    declaration: 'export interface SubagentCapabilities {\n    readonly outputSchema: boolean;\n    readonly depthLimit: boolean;\n    readonly toolFilter: boolean;\n    readonly persona: boolean;\n    readonly workspaceCwd?: boolean;\n}',
   },
   {
     name: 'SubagentConversationResult',
@@ -4232,7 +4245,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SubagentStartRequest',
-    declaration: 'export interface SubagentStartRequest {\n    readonly label?: string;\n    readonly prompt: ContentBlock[];\n    readonly parent: Agent;\n    readonly signal: AbortSignal;\n    readonly agentOptions?: AgentOptions;\n    readonly outputSchema?: ObjectJsonSchema;\n    readonly maxDepth?: number;\n    readonly toolFilter?: ToolRestriction;\n    readonly persona?: string;\n}',
+    declaration: 'export interface SubagentStartRequest {\n    readonly label?: string;\n    readonly prompt: ContentBlock[];\n    readonly parent: Agent;\n    readonly signal: AbortSignal;\n    readonly agentOptions?: AgentOptions;\n    readonly outputSchema?: ObjectJsonSchema;\n    readonly maxDepth?: number;\n    readonly toolFilter?: ToolRestriction;\n    readonly persona?: string;\n    readonly workspaceCwd?: string;\n}',
   },
   {
     name: 'SubagentStopReason',
@@ -4609,6 +4622,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UserQuestionProvider',
     declaration: 'export interface UserQuestionProvider {\n    ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>;\n}',
+  },
+  {
+    name: 'VerifierCriterion',
+    declaration: 'export interface VerifierCriterion {\n    readonly name: string;\n    readonly description: string;\n}',
+  },
+  {
+    name: 'VerifierSelection',
+    declaration: 'export interface VerifierSelection {\n    readonly index: number;\n    readonly scores: readonly number[];\n    readonly ranking: readonly number[];\n    readonly comparisons: number;\n    readonly criteria: readonly string[];\n    readonly usage: VerifierUsage;\n}',
+  },
+  {
+    name: 'VerifierSelectRequest',
+    declaration: 'export interface VerifierSelectRequest {\n    readonly problem: string;\n    readonly candidates: readonly string[];\n    readonly criteria: readonly VerifierCriterion[];\n    readonly model: string;\n    readonly nEvaluations: number;\n    readonly pivots: number;\n    readonly seed: number;\n    readonly maxConcurrency: number;\n    readonly signal?: AbortSignal;\n}',
+  },
+  {
+    name: 'VerifierUsage',
+    declaration: 'export interface VerifierUsage {\n    readonly calls: number;\n    readonly inputTokens: number;\n    readonly cachedInputTokens: number;\n    readonly uncachedInputTokens: number;\n    readonly outputTokens: number;\n    readonly reasoningTokens: number;\n}',
   },
   {
     name: 'WebBootEntry',

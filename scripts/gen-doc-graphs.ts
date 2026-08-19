@@ -539,6 +539,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'One engine per context, as in bash, with no named-provider registry; the general workflow and fixed Ralph consumers start runs whose agent() calls fan out through ctx.subagents.',
   },
   {
+    key: 'verifier',
+    pkg: 'verifier',
+    title: 'Complete trajectory verification seam',
+    mode: 'seam',
+    implementations: ['verifier-python'],
+    consumers: ['tool-verify-candidates', 'tool-best-of-n'],
+    note: 'Providers rank complete candidate trajectories through explicit selection requests; opt-in consumers either read authorized durable Sessions or generate isolated subagent candidates and promote one patch.',
+  },
+  {
     key: 'lsp',
     pkg: 'lsp',
     title: 'Language-server navigation seam',

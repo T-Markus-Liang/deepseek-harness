@@ -40,6 +40,9 @@ subagent seam 允许一个 agent（智能体）通过具名提供方把工作委
 - `depthLimit`：强制执行 `maxDepth`；
 - `toolFilter`：应用请求的子 agent 工具限制；
 - `persona`：应用每个子 agent 独立的 persona。
+- `workspaceCwd`：用绝对隔离工作区路径替换 one-shot 子 agent 继承的 cwd。
+
+`workspaceCwd` 是可信调用方能力，不是普通委派工具向模型暴露的路径。Service 会在启动前拒绝相对路径以及未声明支持的 provider。同进程 spawn 和 fork provider 负责创建子 Session，因此支持此能力；进程外 provider 继续使用各自部署配置的 cwd 策略。
 
 每个进程内子 agent 都通过一次 `applyChildComposition(childCtx, parent, composition)` 调用完成组装：先加入父级的 agent-preset 组合，再应用子 agent 自己的 persona 和工具限制。加入父级组合正是子 agent 获得能力的途径：所有面向模型的行都位于 agent 平面，完全没有加入任何组合的子 agent 抵达模型时会看到空的工具注册表（见 [`dsh-agent-presets`](../../preset/agent-presets/README.md)）。将父级作为参数是刻意设计：这让“组装子 agent 却不做该加入”在各调用点无法表达，而这正是这一次调用所要杜绝的缺陷。未组装 preset roster 的部署不加入任何组合、也不需要加入；其面向模型的行位于宿主组合中，子 agent 已能通过工具注册表的全局层解析到它们。
 

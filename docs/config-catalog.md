@@ -2392,6 +2392,46 @@ export interface Config {
 
 Source: [`packages/shell/tool-bash-persistent/src/index.ts:400`](../packages/shell/tool-bash-persistent/src/index.ts)
 
+<a id="deepseek-aidsh-tool-best-of-n"></a>
+
+## `@deepseek-ai/dsh-tool-best-of-n`
+
+Requires: `tools` · `subagents` · `subprocess` · `verifier`
+
+```ts config-catalog
+/** Deployment policy for candidate generation, scoring, and patch promotion. */
+export interface Config {
+  /** Model-facing tool name. Defaults to `best_of_n`. */
+  toolName?: string
+  /** One-shot subagent provider that must advertise `workspaceCwd`. */
+  subagentProvider?: string
+  /** Optional provider override for every candidate agent. */
+  candidateProvider?: string
+  /** Optional model override for every candidate agent. */
+  candidateModel?: string
+  /** Optional maximum output tokens for every candidate agent. */
+  candidateMaxTokens?: number
+  /** Verifier backend model identifier. Defaults to `deepseek-chat`. */
+  verifierModel?: string
+  /** Repeated verifier evaluations per criterion. Defaults to 4. */
+  nEvaluations?: number
+  /** Tournament pivot count, capped to the requested candidate count. */
+  pivots?: number
+  /** Maximum concurrent verifier calls. Defaults to 4. */
+  maxConcurrency?: number
+  /** Maximum candidate agents accepted by one tool call. */
+  maxCandidates?: number
+  /** Maximum characters in each completed candidate trajectory. */
+  maxTrajectoryChars?: number
+  /** Independent byte limit for each Git subprocess output stream. */
+  maxGitOutputBytes?: number
+  /** Grace period for terminating a Git subprocess tree. */
+  gitGraceMs?: number
+}
+```
+
+Source: [`packages/verifier/tool-best-of-n/src/index.ts:19`](../packages/verifier/tool-best-of-n/src/index.ts)
+
 <a id="deepseek-aidsh-tool-fs"></a>
 
 ## `@deepseek-ai/dsh-tool-fs`
@@ -2736,6 +2776,34 @@ export interface Config {
 
 Source: [`packages/todo/tool-todo/src/index.ts:29`](../packages/todo/tool-todo/src/index.ts)
 
+<a id="deepseek-aidsh-tool-verify-candidates"></a>
+
+## `@deepseek-ai/dsh-tool-verify-candidates`
+
+Requires: `tools` · `sessionPersistence` · `verifier`
+
+```ts config-catalog
+/** Deployment-owned verifier cost and trajectory limits. */
+export interface Config {
+  /** Model-facing tool name. Defaults to `verify_candidates`. */
+  toolName?: string
+  /** Verifier backend model identifier. Defaults to `deepseek-chat`. */
+  model?: string
+  /** Repeated evaluations per criterion. Defaults to 4. */
+  nEvaluations?: number
+  /** Tournament pivot count, capped to the request's candidate count. */
+  pivots?: number
+  /** Maximum concurrent verifier calls. Defaults to 4. */
+  maxConcurrency?: number
+  /** Maximum durable Session ids accepted by one tool call. */
+  maxCandidates?: number
+  /** Maximum characters in each projected Session trajectory. */
+  maxTrajectoryChars?: number
+}
+```
+
+Source: [`packages/verifier/tool-verify-candidates/src/index.ts:15`](../packages/verifier/tool-verify-candidates/src/index.ts)
+
 <a id="deepseek-aidsh-tool-web"></a>
 
 ## `@deepseek-ai/dsh-tool-web`
@@ -2862,6 +2930,40 @@ export type ApprovalPolicy = 'ask' | 'never'
 ```
 
 Source: [`packages/interaction/user-approval/src/index.ts:177`](../packages/interaction/user-approval/src/index.ts)
+
+<a id="deepseek-aidsh-verifier-python"></a>
+
+## `@deepseek-ai/dsh-verifier-python`
+
+Requires: `subprocess` · `credentials`
+
+```ts config-catalog
+/** Deployment policy for the pinned bridge. */
+export interface Config {
+  /** Python executable resolved through the subprocess service. Defaults to `python3`. */
+  pythonCommand?: string
+  /** Optional deployment-owned bridge file; omitted uses the embedded pinned bridge. */
+  bridgePath?: string
+  /** Credential reference resolved for multi-candidate selections. Defaults to `DEEPSEEK_API_KEY`. */
+  credentialRef?: string
+  /** Environment variable receiving the resolved credential in the private process. */
+  credentialEnv?: string
+  /** Optional OpenAI-compatible base URL passed to the verifier process. */
+  baseUrl?: string
+  /** Maximum candidates accepted by one selection. Defaults to 16. */
+  maxCandidates?: number
+  /** Maximum characters accepted in each serialized candidate trajectory. */
+  maxCandidateChars?: number
+  /** Maximum characters accepted in the shared problem statement. */
+  maxProblemChars?: number
+  /** Independent byte limit applied to bridge stdout and stderr. */
+  maxOutputBytes?: number
+  /** Grace period for terminating the complete Python process tree. */
+  graceMs?: number
+}
+```
+
+Source: [`packages/verifier/verifier-python/src/index.ts:44`](../packages/verifier/verifier-python/src/index.ts)
 
 <a id="deepseek-aidsh-web"></a>
 
@@ -3130,6 +3232,7 @@ Abstract service classes — a deployment loads a concrete implementation packag
 - `@deepseek-ai/dsh-shell` — abstract `ShellExecutor` ([`packages/shell/shell/src/index.ts`](../packages/shell/shell/src/index.ts))
 - `@deepseek-ai/dsh-spill` — abstract `SpillStore` ([`packages/spill/spill/src/index.ts`](../packages/spill/spill/src/index.ts))
 - `@deepseek-ai/dsh-subprocess` — abstract `SubprocessRuntime` ([`packages/subprocess/subprocess/src/index.ts`](../packages/subprocess/subprocess/src/index.ts))
+- `@deepseek-ai/dsh-verifier` — abstract `Verifier` ([`packages/verifier/verifier/src/index.ts`](../packages/verifier/verifier/src/index.ts))
 - `@deepseek-ai/dsh-workflow` — abstract `WorkflowEngine` ([`packages/workflow/workflow/src/index.ts`](../packages/workflow/workflow/src/index.ts))
 
 ## Library packages (no plugin entry)

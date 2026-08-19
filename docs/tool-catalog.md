@@ -30,8 +30,10 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-schedule` | `schedule_create`, `schedule_delete`, `schedule_list` | `ctx.tools`, `ctx.sessions`, `Session persistence`, `a future live root Agent` | `tool/call`, `schedule/change create or delete`, `tool/result` | - | Registered only inside live root Agent scopes created after the opt-in Schedule plugin loads. Version 1 accepts after_seconds, explicit absolute at, and bounded fixed-rate every_seconds, and discloses session-local delivery; management reads and mutations require the shared Session persistence barrier. |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`, `ctx.lsp`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema. |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`, `ctx.workflowEngine`, `ctx.subagents`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents every fresh round)` | `tool/call`, `tool/result`, `workflow and child session events during execution` | - | A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap. |
+| `@deepseek-ai/dsh-tool-best-of-n` | `best_of_n` | `ctx.tools`, `ctx.subagents`, `ctx.subprocess`, `ctx.verifier`, `a calling Agent with a clean Git workspace` | `tool/call`, `candidate Session events`, `winning filesystem patch`, `tool/result` | - | An opt-in fixed coding workflow over a workspace-aware one-shot subagent provider. It creates detached Git worktrees at one clean parent HEAD, ranks complete local child Sessions, applies only the winner patch, and removes losing worktrees. |
 | `@deepseek-ai/dsh-tool-skill` | `skill` | `ctx.tools`, `ctx.agents`, `ctx.skills` | `tool/call`, `tool/result`, `user/message replacement catalogs via agent.inject()` | - | - |
 | `@deepseek-ai/dsh-tool-session-query` | `session_event_read`, `session_event_search`, `session_event_trace`, `session_search`, `session_trace` | `ctx.tools`, `ctx.systemPrompt`, `ctx.sessionQuery`, `a calling Agent for workspace authority` | `tool/call`, `tool/result` | - | The five read-only tools hide provider cursors and authorize every result from the immutable calling agent session. The package is opt-in; compositions that need enforced deadlines or bounded inline output also mount the generic timeout or spill policies. |
+| `@deepseek-ai/dsh-tool-verify-candidates` | `verify_candidates` | `ctx.tools`, `ctx.sessionPersistence`, `ctx.verifier` | `tool/call`, `tool/result` | - | Ranks complete current message surfaces from existing durable Session ids in the caller workspace; candidate trajectories are read from persistence and are not copied into the parent conversation. |
 | `@deepseek-ai/dsh-tool-subagent` | `subagent` | `ctx.tools`, `ctx.subagents`, `ctx.systemPrompt` | `tool/call`, `tool/result`, `child session events through the chosen provider` | `subagent`, `subagent_fork` | The registered tool name is the load-time `toolName` config (default `subagent`); the schema above is that default. The shipped compositions load this package once per subagent backend, so the model additionally sees `subagent_fork` bound to the fork backend. Each instance's description, `run_in_background` parameter, and system-prompt policy follow its own `backgroundMode` and `enableRunInBackground`, so the two shipped schemas are not identical: `subagent` is `continuable` and defaults omitted calls to background with automatic settlement delivery, while `subagent_fork` stays `one-shot` and defaults them to foreground — see `packages/bundle/base/cordis.patch.yml` and `examples/acp-agent/cordis.yml`. |
 | `@deepseek-ai/dsh-tool-subagent-control` | `get_agent_result`, `interrupt_agent`, `list_agents`, `send_message` | `ctx.tools`, `ctx.subagents`, `ctx.agents and ctx.sessionProjections (list_agents only)` | `tool/call`, `tool/result`, `child session events through ctx.subagents` | - | The globally named control tools over continuable background subagents: provider-bound `tool-subagent` instances register distinct delegation tools, while this package registers `send_message`, `get_agent_result`, and `interrupt_agent` once, plus `list_agents` from its separately loaded `/list-agents` plugin (whose catalog rows use the sessionProjections and live Agent registries). |
 | `@deepseek-ai/dsh-tool-subagent-report` | `report` | `ctx.subagents`, `ctx.systemPrompt`, `a live continuable in-process child Agent` | `tool/call`, `tool/result`, `a user-role message in the direct parent session` | - | Registered per continuable in-process child rather than globally, so this schema is visible only inside such a child and survives its global `toolFilter`. The same contribution installs the child-scoped `tool:report` prompt section, which this catalog does not render. The parent-facing `send_message` tool is installed independently. |
@@ -1208,6 +1210,63 @@ Source: [`packages/workflow/tool-ralph/src/index.ts`](../packages/workflow/tool-
 
 A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap.
 
+<a id="deepseek-aidsh-tool-best-of-n"></a>
+
+## `@deepseek-ai/dsh-tool-best-of-n`
+
+### `best_of_n`
+
+Run several independent coding candidates in isolated detached Git worktrees, rank their complete Sessions with the configured verifier, apply only the winning patch to the clean parent worktree, and discard the losing worktrees.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "objective": {
+      "type": "string",
+      "description": "One coding task for every candidate."
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Independent criteria used to rank candidate trajectories.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      }
+    },
+    "candidates": {
+      "type": "integer",
+      "description": "Number of independent candidates to generate."
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Deterministic verifier tournament seed; defaults to 0."
+    }
+  },
+  "required": [
+    "objective",
+    "criteria",
+    "candidates"
+  ]
+}
+```
+
+Source: [`packages/verifier/tool-best-of-n/src/index.ts`](../packages/verifier/tool-best-of-n/src/index.ts)
+
+An opt-in fixed coding workflow over a workspace-aware one-shot subagent provider. It creates detached Git worktrees at one clean parent HEAD, ranks complete local child Sessions, applies only the winner patch, and removes losing worktrees.
+
 <a id="deepseek-aidsh-tool-skill"></a>
 
 ## `@deepseek-ai/dsh-tool-skill`
@@ -1467,6 +1526,66 @@ Read the authorized session lineage around one session, including complete visib
 Source: [`packages/session-query/tool-session-query/src/index.ts`](../packages/session-query/tool-session-query/src/index.ts)
 
 The five read-only tools hide provider cursors and authorize every result from the immutable calling agent session. The package is opt-in; compositions that need enforced deadlines or bounded inline output also mount the generic timeout or spill policies.
+
+<a id="deepseek-aidsh-tool-verify-candidates"></a>
+
+## `@deepseek-ai/dsh-tool-verify-candidates`
+
+### `verify_candidates`
+
+Rank existing candidate Sessions from the caller workspace that attempted the same task. Supply durable Session ids in the order to score; the tool reads their current model-visible trajectories and returns the winner and complete ranking.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "problem": {
+      "type": "string",
+      "description": "The task every candidate attempted."
+    },
+    "candidateSessionIds": {
+      "type": "array",
+      "description": "Distinct durable candidate Session ids, in stable input order.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Independent evaluation criteria.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      }
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Deterministic tournament seed; defaults to 0."
+    }
+  },
+  "required": [
+    "problem",
+    "candidateSessionIds",
+    "criteria"
+  ]
+}
+```
+
+Source: [`packages/verifier/tool-verify-candidates/src/index.ts`](../packages/verifier/tool-verify-candidates/src/index.ts)
+
+Ranks complete current message surfaces from existing durable Session ids in the caller workspace; candidate trajectories are read from persistence and are not copied into the parent conversation.
 
 <a id="deepseek-aidsh-tool-subagent"></a>
 

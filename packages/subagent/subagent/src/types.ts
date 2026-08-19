@@ -88,6 +88,8 @@ export interface SubagentCapabilities {
   readonly depthLimit: boolean
   readonly toolFilter: boolean
   readonly persona: boolean
+  /** Whether one-shot starts may override the child Session working directory. */
+  readonly workspaceCwd?: boolean
 }
 
 /**
@@ -146,6 +148,11 @@ export interface SubagentStartRequest {
    * persona (strict `{{…}}` interpolation against the registered variables).
    */
   readonly persona?: string
+  /**
+   * Absolute workspace directory for this one-shot child. Requires the
+   * provider's `workspaceCwd` capability; omission inherits the parent's cwd.
+   */
+  readonly workspaceCwd?: string
 }
 
 /**

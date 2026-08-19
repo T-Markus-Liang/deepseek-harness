@@ -1944,6 +1944,26 @@
       "doc": "docs/subsystems/feedback.md",
       "symbol": "MessageFeedbackDeleteResult",
       "source": "packages/feedback/message-feedback/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierCriterion",
+      "source": "packages/verifier/verifier/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierSelectRequest",
+      "source": "packages/verifier/verifier/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierUsage",
+      "source": "packages/verifier/verifier/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierSelection",
+      "source": "packages/verifier/verifier/src/types.ts"
     }
   ]
 }

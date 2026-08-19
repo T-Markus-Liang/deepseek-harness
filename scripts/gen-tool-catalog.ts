@@ -14,6 +14,7 @@ import AgentRegistry from '@deepseek-ai/dsh-agent'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { createScope } from '@deepseek-ai/dsh-scope'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
+import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
 import SqliteSessionQueryEngine from '@deepseek-ai/dsh-session-query-sqlite'
 import GoalService from '@deepseek-ai/dsh-goal'
@@ -63,6 +64,10 @@ import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
 import * as ToolWorkflow from '@deepseek-ai/dsh-tool-workflow'
+import { Verifier } from '@deepseek-ai/dsh-verifier'
+import type { VerifierSelectRequest, VerifierSelection } from '@deepseek-ai/dsh-verifier'
+import * as ToolVerifyCandidates from '@deepseek-ai/dsh-tool-verify-candidates'
+import * as ToolBestOfN from '@deepseek-ai/dsh-tool-best-of-n'
 import { githubSlug } from './verify-md-links.ts'
 
 /** Attachment seam marker that makes the attachments-conditional `read_image` schema harvestable. */
@@ -88,6 +93,13 @@ class CatalogAttachmentStore extends AttachmentStore {
   }
 }
 
+/** Non-executing verifier used only to let verifier Consumers register schemas. */
+class CatalogVerifier extends Verifier {
+  override select(_request: VerifierSelectRequest): Promise<VerifierSelection> {
+    return Promise.reject(new Error('tool-catalog verifier cannot select a candidate'))
+  }
+}
+
 const root = resolve(import.meta.dirname, '..')
 const OUT = 'docs/tool-catalog.md'
 
@@ -100,7 +112,7 @@ const OUT = 'docs/tool-catalog.md'
 function registerCatalogSubagentProvider(ctx: Context, name: string): void {
   const provider: SubagentProvider = {
     name,
-    capabilities: { outputSchema: true, depthLimit: true, toolFilter: true, persona: true },
+    capabilities: { outputSchema: true, depthLimit: true, toolFilter: true, persona: true, workspaceCwd: true },
     inheritsParentContext: false,
     start: () => Promise.reject(new Error('tool-catalog provider cannot start a child')),
     // Declared so consumers configured for continuable background mode mount.
@@ -406,6 +418,22 @@ const TOOL_PACKAGES: ToolPackage[] = [
       'A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap.',
   },
   {
+    pkg: '@deepseek-ai/dsh-tool-best-of-n',
+    dir: 'tool-best-of-n',
+    source: 'packages/verifier/tool-best-of-n/src/index.ts',
+    requires: ['ctx.tools', 'ctx.subagents', 'ctx.subprocess', 'ctx.verifier', 'a calling Agent with a clean Git workspace'],
+    writes: ['tool/call', 'candidate Session events', 'winning filesystem patch', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(LocalSubprocessRuntime)
+      await ctx.plugin(SubagentRuntime)
+      registerCatalogSubagentProvider(ctx, 'spawn')
+      new CatalogVerifier(ctx)
+      await ctx.plugin(ToolBestOfN)
+    },
+    note:
+      'An opt-in fixed coding workflow over a workspace-aware one-shot subagent provider. It creates detached Git worktrees at one clean parent HEAD, ranks complete local child Sessions, applies only the winner patch, and removes losing worktrees.',
+  },
+  {
     pkg: '@deepseek-ai/dsh-tool-skill',
     dir: 'tool-skill',
     source: 'packages/skill/tool-skill/src/index.ts',
@@ -434,6 +462,24 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'The five read-only tools hide provider cursors and authorize every result from the immutable calling agent session. The package is opt-in; compositions that need enforced deadlines or bounded inline output also mount the generic timeout or spill policies.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-verify-candidates',
+    dir: 'tool-verify-candidates',
+    source: 'packages/verifier/tool-verify-candidates/src/index.ts',
+    requires: ['ctx.tools', 'ctx.sessionPersistence', 'ctx.verifier'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(SessionStore)
+      await ctx.plugin(JsonlSessionPersistence, {
+        root: resolve(root, '.tmp/tool-catalog/verifier-sessions'),
+        compression: 'none',
+      })
+      new CatalogVerifier(ctx)
+      await ctx.plugin(ToolVerifyCandidates)
+    },
+    note:
+      'Ranks complete current message surfaces from existing durable Session ids in the caller workspace; candidate trajectories are read from persistence and are not copied into the parent conversation.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-subagent',

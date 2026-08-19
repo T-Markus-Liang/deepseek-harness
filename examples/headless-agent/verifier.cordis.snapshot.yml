@@ -1,0 +1,28 @@
+# Keyless verifier composition. The real Session-backed ranking tool consumes a
+# deterministic local verifier; best_of_n is mounted to pin its model-visible
+# schema without starting candidate processes in this scenario.
+- id: base
+  name: '@deepseek-ai/cordis-plugin-include'
+  config:
+    path: ./cordis.yml
+    patches:
+      - id: llm-deepseek
+        name: '@deepseek-ai/dsh-llm-deepseek'
+        disabled: true
+      - insert:
+          - id: llm-replay
+            name: '@deepseek-ai/dsh-llm-replay'
+          - id: verifier-snapshot-provider
+            name: './tests/fixtures/verifier-snapshot-provider.ts'
+          - id: tool-verify-candidates
+            name: '@deepseek-ai/dsh-tool-verify-candidates'
+            config:
+              model: snapshot-verifier
+              nEvaluations: 2
+              maxConcurrency: 1
+          - id: tool-best-of-n
+            name: '@deepseek-ai/dsh-tool-best-of-n'
+            config:
+              subagentProvider: spawn
+              verifierModel: snapshot-verifier
+              maxCandidates: 3
