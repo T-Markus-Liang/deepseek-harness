@@ -8,7 +8,7 @@ Each operation uses a private temporary cwd, so upstream `.env` discovery cannot
 
 Defaults are conservative: four concurrent verifier calls, `on_error="raise"`, no upstream score cache, and no progress output. Deployments install the exact requirement in the Python environment named by `pythonCommand`.
 
-For a DeepSeek-compatible relay endpoint (one that emits the score tags itself and returns token-level logprobs, for example a shim in front of a DeepSeek-semantics API), set `deepseekCompatible: true` so the provider forwards `DEEPSEEK_MAX_TOKENS` (default 8192) and `DEEPSEEK_EFFORT` (default `off`) and the bridge routes scoring through the DeepSeek call path. Point `credentialEnv` at `OPENAI_API_KEY`, which is the variable the upstream OpenAI-compatible client reads when an OpenAI base URL is configured.
+For a DeepSeek-compatible relay endpoint (one that emits the score tags itself and returns token-level logprobs, for example a shim in front of a DeepSeek-semantics API), set `deepseekCompatible: true` so the provider forwards `DEEPSEEK_MAX_TOKENS` (default 8192) and `DEEPSEEK_EFFORT` (default `off`) and the bridge routes scoring through the DeepSeek call path. Point `credentialEnv` at `OPENAI_API_KEY`, which is the variable the upstream OpenAI-compatible client reads when an OpenAI base URL is configured. A profile plugin entry for such a relay therefore sets `baseUrl`, a `credentialRef` resolving to the relay key, `credentialEnv: OPENAI_API_KEY`, and `deepseekCompatible: true`; the model named by each request must exist on the relay.
 
 ## Model Experience
 

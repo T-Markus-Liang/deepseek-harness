@@ -8,7 +8,7 @@
 
 默认策略保持保守：最多四个并发 verifier 调用、`on_error="raise"`、禁用上游评分 cache、禁用进度输出。部署负责在 `pythonCommand` 指定的 Python 环境中安装精确依赖。
 
-对于 DeepSeek 兼容的中转端点（端点自行输出评分标签并返回 token 级 logprobs，例如位于 DeepSeek 语义 API 之前的 shim），设置 `deepseekCompatible: true`，provider 会转发 `DEEPSEEK_MAX_TOKENS`（默认 8192）与 `DEEPSEEK_EFFORT`（默认 `off`），bridge 的评分走 DeepSeek 调用路径。将 `credentialEnv` 指向 `OPENAI_API_KEY`——配置 OpenAI base URL 时，上游 OpenAI 兼容客户端读取的正是该变量。
+对于 DeepSeek 兼容的中转端点（端点自行输出评分标签并返回 token 级 logprobs，例如位于 DeepSeek 语义 API 之前的 shim），设置 `deepseekCompatible: true`，provider 会转发 `DEEPSEEK_MAX_TOKENS`（默认 8192）与 `DEEPSEEK_EFFORT`（默认 `off`），bridge 的评分走 DeepSeek 调用路径。将 `credentialEnv` 指向 `OPENAI_API_KEY`——配置 OpenAI base URL 时，上游 OpenAI 兼容客户端读取的正是该变量。因此这类中转的 profile 插件条目需要设置 `baseUrl`、解析到中转 key 的 `credentialRef`、`credentialEnv: OPENAI_API_KEY` 与 `deepseekCompatible: true`；每个请求指定的模型必须在该中转上存在。
 
 ## 模型体验
 
