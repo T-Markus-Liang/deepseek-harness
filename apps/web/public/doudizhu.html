@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>斗地主</title>
-
+  
 <style>/* ==================== 斗地主 - 样式表 ==================== */
 
 /* 全局样式 */
@@ -43,7 +43,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background:
+  background: 
     repeating-linear-gradient(
       0deg,
       transparent,
@@ -229,6 +229,21 @@ body {
   color: #fff;
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-size: 22px;
+}
+
+/* 角色标签（方言/性格） */
+.player-tag {
+  display: inline-block;
+  font-size: 10px;
+  color: #ffd700;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  border-radius: 8px;
+  padding: 0 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+  font-weight: normal;
 }
 
 .player-details {
@@ -311,83 +326,153 @@ body {
   cursor: default;
 }
 
-/* 出牌区（桌面中央舞台，三角摆放：上家左上 / 下家右上 / 自己中下） */
+/* 出牌区：真实打牌——出的牌凌乱地堆在牌桌中央 */
 #play-area {
   position: relative;
   width: 100%;
   min-height: 175px;
   padding: 0;
   margin: 0;
-}
-
-.play-slot {
-  position: absolute;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.22);
-  border: 1px solid rgba(255, 215, 0, 0.15);
-  border-radius: 12px;
-  min-width: 0;
-  min-height: 0;
+  /* 模拟木质桌面纹理底 */
+  background: radial-gradient(ellipse at center, rgba(46, 84, 44, 0.55) 0%, rgba(24, 52, 26, 0.35) 60%, transparent 100%);
+  border-radius: 14px;
 }
 
-/* 上家（老胡）出的牌：堆在桌子左上方 */
-.play-slot-2 {
-  top: 4%;
-  left: 7%;
+/* 玩家前方展示位：出牌瞬间先展示在出牌者面前（复刻真实打牌） */
+.play-front {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;               /* 默认隐藏，出牌时显示 */
+  transition: opacity 0.15s ease;
 }
-
-/* 下家（小呆）出的牌：堆在桌子右上方 */
-.play-slot-1 {
-  top: 4%;
-  right: 7%;
+.play-front.show {
+  opacity: 1;
 }
-
-/* 自己出的牌：堆在桌子中间下方 */
-.play-slot-0 {
-  bottom: 3%;
+/* 人类（下）：靠近底部手牌上方 */
+.play-front-bottom {
   left: 50%;
+  bottom: 8px;
   transform: translateX(-50%);
 }
-
-/* 一手牌横向排列容器 */
-.cards-row {
-  display: flex;
-  gap: 3px;
+/* AI-1（右）：靠近右侧玩家 */
+.play-front-right {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* AI-2（左）：靠近左侧玩家 */
+.play-front-left {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+/* 展示位的牌：正常大小，清晰展示 */
+.play-front .card {
+  width: 52px;
+  height: 74px;
+  animation: cardPlay 0.25s ease-out forwards;
+}
+/* 展示位牌汇入中心牌堆时的飞行动画 */
+.play-front .card.fly-out {
+  transition: transform 0.45s ease-in, opacity 0.45s ease-in;
+  opacity: 0;
 }
 
-.play-slot .card {
-  animation: cardPlay 0.3s ease-out;
+/* 中间堆放容器：一手牌绝对定位堆在这里，随机偏移/旋转 */
+#play-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 175px;
+}
+
+/* 一手牌：以中央为锚点随机散落 */
+.played-hand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  /* transform 由 JS 动态设置: translate(calc(-50% + dx), calc(-50% + dy)) rotate(deg) */
+}
+
+/* 一手牌的内层：淡入上浮动画（不影响外层随机定位） */
+.played-hand-inner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  animation: handDrop 0.32s ease-out;
+}
+
+/* 牌落入牌堆的动画：从上往下掉 + 淡入 */
+@keyframes handDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 牌堆里每张牌：微小的随机偏移/旋转由 JS 内联 transform 控制
+   必须 forwards：覆盖 .card-animate-in 的 opacity:0 且保持动画结束态 opacity:1，
+   否则动画播完 opacity 回到 0，牌会"闪烁一眼就消失" */
+.played-hand .card {
+  animation: cardPlay 0.25s ease-out forwards;
+}
+
+/* 牌堆超上限时，最旧一手淡出移除（不突兀消失） */
+.played-hand-fade-out {
+  animation: handFadeOut 0.5s ease-in forwards !important;
+}
+@keyframes handFadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.9);
+  }
 }
 
 .play-type-label {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%);
+  white-space: nowrap;
   font-size: 12px;
   color: #ffd700;
   background: rgba(0, 0, 0, 0.4);
   padding: 2px 10px;
   border-radius: 10px;
-  margin-top: 2px;
 }
 
-/* 出牌历史区（顶部明示本局出过的牌） */
+/* 出牌记录（最顶部独立窄条，单行横向滚动，完全不遮挡牌桌） */
 #play-history {
-  width: 94%;
-  max-width: 560px;
-  margin: 0 auto 6px;
+  width: 96%;
+  max-width: 900px;
+  margin: 2px auto;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 215, 0, 0.25);
   border-radius: 8px;
-  padding: 4px 8px;
+  padding: 3px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-height: 84px;
+  max-height: 46px;
   overflow-y: auto;
   scrollbar-width: thin;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 #play-history::-webkit-scrollbar {
@@ -400,19 +485,23 @@ body {
 }
 
 .history-title {
-  font-size: 11px;
+  font-size: 10px;
   color: #ffd700;
   letter-spacing: 1px;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
   flex-shrink: 0;
 }
 
 .history-list {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 3px;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: center;
   width: 100%;
+  scrollbar-width: thin;
+  padding-bottom: 1px;
 }
 
 .history-row {
@@ -838,48 +927,48 @@ body {
     width: 48px;
     height: 68px;
   }
-
+  
   .card-small {
     width: 36px;
     height: 50px;
   }
-
+  
   .card-rank {
     font-size: 12px;
   }
-
+  
   .card-center {
     font-size: 18px;
   }
-
+  
   #hand-cards .card {
     margin-left: -14px;
   }
-
+  
   .player-area {
     min-width: 90px;
     padding: 6px 8px;
   }
-
+  
   .player-avatar {
     width: 32px;
     height: 32px;
     font-size: 14px;
   }
-
+  
   .player-name {
     font-size: 12px;
   }
-
+  
   .victory-title {
     font-size: 32px;
   }
-
+  
   .btn {
     padding: 6px 12px;
     font-size: 13px;
   }
-
+  
   #play-area {
     min-height: 130px;
   }
@@ -890,30 +979,30 @@ body {
     width: 38px;
     height: 54px;
   }
-
+  
   .card-small {
     width: 30px;
     height: 42px;
   }
-
+  
   #hand-cards .card {
     margin-left: -10px;
   }
-
+  
   .player-area {
     min-width: 70px;
   }
-
+  
   .player-avatar {
     width: 26px;
     height: 26px;
     font-size: 12px;
   }
-
+  
   .player-name {
     font-size: 10px;
   }
-
+  
   .player-cards-count {
     font-size: 9px;
   }
@@ -930,9 +1019,15 @@ body {
           <button id="restart-btn" class="btn-restart">🔄 重新开始</button>
         </div>
       </div>
-
+      
       <!-- 游戏主区域 -->
       <div class="game-main">
+        <!-- 出牌记录（最顶部独立栏，不遮挡牌桌） -->
+        <div id="play-history">
+          <div class="history-title">📜 本局出牌记录</div>
+          <div class="history-list" id="history-list"></div>
+        </div>
+        
         <!-- AI玩家 -->
         <div class="ai-players">
           <div id="player-2" class="player-area player-left">
@@ -942,59 +1037,57 @@ body {
             <div class="player-info"></div>
           </div>
         </div>
-
+        
         <!-- 中央区域 -->
         <div class="center-area">
-          <!-- 出牌历史（最上方，明示本局所有出过的牌） -->
-          <div id="play-history">
-            <div class="history-title">📜 本局出牌记录</div>
-            <div class="history-list" id="history-list"></div>
-          </div>
-
           <!-- 状态信息 -->
           <div id="game-status">斗地主</div>
-
+          
           <!-- 信息面板 -->
           <div id="info-panel">
             <span>🃏 斗地主</span>
           </div>
-
+          
           <!-- 底牌 -->
           <div id="landlord-cards"></div>
-
-          <!-- 出牌区 -->
+          
+          <!-- 出牌区：真实打牌，出的牌凌乱堆在牌桌中间 -->
           <div id="play-area">
-            <div class="play-slot play-slot-2"></div>
-            <div class="play-slot play-slot-0"></div>
-            <div class="play-slot play-slot-1"></div>
+            <!-- 玩家前方展示位：出牌瞬间先在此展示（下方=人类/右侧=AI-1/左侧=AI-2） -->
+            <div id="play-front-0" class="play-front play-front-bottom"></div>
+            <div id="play-front-1" class="play-front play-front-right"></div>
+            <div id="play-front-2" class="play-front play-front-left"></div>
+            <!-- 中心散乱牌堆：所有已出的牌累积堆叠 -->
+            <div id="play-stack"></div>
           </div>
         </div>
-
+        
         <!-- 人类玩家 -->
         <div id="player-0" class="player-area" style="align-self:center; margin-bottom: 4px;">
           <div class="player-info"></div>
         </div>
-
+        
         <!-- 手牌区 -->
         <div id="hand-cards"></div>
-
+        
         <!-- 控制按钮 -->
         <div id="controls" class="hidden"></div>
-
+        
         <!-- 叫地主控制 -->
         <div id="bid-controls" class="hidden"></div>
       </div>
     </div>
   </div>
-
+  
   <!-- 脚本加载（按顺序） -->
-
-
-
-
-
-
-
+  
+  
+  
+  
+  
+  
+  
+  
 <script>// ==================== 斗地主 - 牌定义与牌型检测 ====================
 
 // 牌型常量
@@ -1113,7 +1206,7 @@ function getCountMap(cards) {
  */
 function detectType(cards) {
   if (!cards || cards.length === 0) return null;
-
+  
   const n = cards.length;
   const sorted = sortCards(cards);
   const countMap = getCountMap(sorted);
@@ -1121,79 +1214,79 @@ function detectType(cards) {
   const counts = Object.values(countMap).sort((a, b) => a - b);
   const maxCount = Math.max(...counts);
   const minCount = Math.min(...counts);
-
+  
   // 火箭：小王+大王
   if (n === 2 && sorted[0].rank === 17 && sorted[1].rank === 16) {
     return { type: CARD_TYPE.ROCKET, rank: 17, length: 1 };
   }
-
+  
   // 单张
   if (n === 1) {
     return { type: CARD_TYPE.SINGLE, rank: sorted[0].rank, length: 1 };
   }
-
+  
   // 对子：2张同rank
   if (n === 2 && maxCount === 2) {
     return { type: CARD_TYPE.PAIR, rank: sorted[0].rank, length: 1 };
   }
-
+  
   // 三条：3张同rank
   if (n === 3 && maxCount === 3) {
     return { type: CARD_TYPE.TRIPLE, rank: sorted[0].rank, length: 1 };
   }
-
+  
   // 炸弹：4张同rank
   if (n === 4 && maxCount === 4 && ranks.length === 1) {
     return { type: CARD_TYPE.BOMB, rank: sorted[0].rank, length: 1 };
   }
-
+  
   // 三带一：3张同rank + 1张
   if (n === 4 && maxCount === 3 && minCount === 1 && ranks.length === 2) {
     const tripleRank = Object.entries(countMap).find(([r, c]) => c === 3);
     return { type: CARD_TYPE.TRIPLE_ONE, rank: parseInt(tripleRank[0]), length: 1 };
   }
-
+  
   // 三带二：3张同rank + 2张同rank
   if (n === 5 && maxCount === 3 && minCount === 2 && ranks.length === 2) {
     const tripleRank = Object.entries(countMap).find(([r, c]) => c === 3);
     return { type: CARD_TYPE.TRIPLE_TWO, rank: parseInt(tripleRank[0]), length: 1 };
   }
-
+  
   // 顺子：5张或更多连续单牌（3-A，不能含2和王）
   if (n >= 5 && maxCount === 1 && minCount === 1) {
     if (isConsecutive(ranks) && ranks[ranks.length - 1] <= 14) {
       return { type: CARD_TYPE.STRAIGHT, rank: ranks[ranks.length - 1], length: n };
     }
   }
-
+  
   // 连对：3对或更多连续对子
   if (n >= 6 && n % 2 === 0 && maxCount === 2 && minCount === 2) {
     if (isConsecutive(ranks) && ranks[ranks.length - 1] <= 14) {
       return { type: CARD_TYPE.DOUBLE_STRAIGHT, rank: ranks[ranks.length - 1], length: n / 2 };
     }
   }
-
+  
   // 飞机：2个或更多连续三条
   if (n >= 6 && maxCount === 3) {
     const tripleRanks = Object.entries(countMap)
       .filter(([r, c]) => c === 3)
       .map(([r]) => parseInt(r))
       .sort((a, b) => a - b);
-
+    
     if (tripleRanks.length >= 2 && isConsecutive(tripleRanks) && tripleRanks[tripleRanks.length - 1] <= 14) {
       const tripleCount = tripleRanks.length;
       const remainingCards = n - tripleCount * 3;
-
+      
       // 纯飞机（无带牌）
       if (remainingCards === 0) {
         return { type: CARD_TYPE.PLANE, rank: tripleRanks[tripleRanks.length - 1], length: tripleCount };
       }
-
+      
       // 飞机带单：每套带1张
       if (remainingCards === tripleCount) {
         return { type: CARD_TYPE.PLANE_SINGLE, rank: tripleRanks[tripleRanks.length - 1], length: tripleCount };
       }
-
+      
       // 飞机带对：每套带1对
       if (remainingCards === tripleCount * 2) {
         // 检查带的牌是否都是对子
@@ -1206,7 +1299,7 @@ function detectType(cards) {
       }
     }
   }
-
+  
   // 四带二：4张同rank + 2张单牌（或2对）
   if (n === 6 && maxCount === 4) {
     const fourRank = Object.entries(countMap).find(([r, c]) => c === 4);
@@ -1223,7 +1316,7 @@ function detectType(cards) {
       }
     }
   }
-
+  
   return null;
 }
 
@@ -1246,27 +1339,27 @@ function isConsecutive(arr) {
 function canBeat(playCards, lastPlay) {
   if (!playCards || playCards.length === 0) return false;
   if (!lastPlay || !lastPlay.cards || lastPlay.cards.length === 0) return true;
-
+  
   const playType = detectType(playCards);
   const lastType = lastPlay.type ? lastPlay : detectType(lastPlay.cards);
-
+  
   if (!playType) return false;
-
+  
   // 火箭可以管一切
   if (playType.type === CARD_TYPE.ROCKET) return true;
-
+  
   // 炸弹可以管非火箭的其他牌型
   if (playType.type === CARD_TYPE.BOMB) {
     if (lastType.type === CARD_TYPE.ROCKET) return false;
     if (lastType.type === CARD_TYPE.BOMB) return playType.rank > lastType.rank;
     return true;
   }
-
+  
   // 非炸弹/火箭，必须同类型且同长度，且rank更大
   if (playType.type === lastType.type && playType.length === lastType.length) {
     return playType.rank > lastType.rank;
   }
-
+  
   return false;
 }
 
@@ -1284,30 +1377,30 @@ function findValidPlays(hand, lastPlay) {
     if (!rankGroups[c.rank]) rankGroups[c.rank] = [];
     rankGroups[c.rank].push(c);
   }
-
+  
   let allPlays = [];
-
+  
   // 如果不是跟牌（自由出牌），生成所有可能的牌型
   if (!lastPlay || !lastPlay.cards || lastPlay.cards.length === 0) {
     // 单张
     for (const c of sorted) {
       allPlays.push([c]);
     }
-
+    
     // 对子
     for (const [rank, group] of Object.entries(rankGroups)) {
       if (group.length >= 2) {
         allPlays.push(group.slice(0, 2));
       }
     }
-
+    
     // 三条
     for (const [rank, group] of Object.entries(rankGroups)) {
       if (group.length >= 3) {
         allPlays.push(group.slice(0, 3));
       }
     }
-
+    
     // 三带一
     for (const [rank, group] of Object.entries(rankGroups)) {
       if (group.length >= 3) {
@@ -1319,7 +1412,7 @@ function findValidPlays(hand, lastPlay) {
         }
       }
     }
-
+    
     // 三带二
     for (const [rank1, group1] of Object.entries(rankGroups)) {
       if (group1.length >= 3) {
@@ -1331,7 +1424,7 @@ function findValidPlays(hand, lastPlay) {
         }
       }
     }
-
+    
     // 顺子
     for (let start = 3; start <= 10; start++) {
       for (let len = 5; len <= 12 && start + len - 1 <= 14; len++) {
@@ -1349,7 +1442,7 @@ function findValidPlays(hand, lastPlay) {
         }
       }
     }
-
+    
     // 连对
     for (let start = 3; start <= 12; start++) {
       for (let len = 3; len <= 10 && start + len - 1 <= 14; len++) {
@@ -1367,7 +1460,7 @@ function findValidPlays(hand, lastPlay) {
         }
       }
     }
-
+    
     // 飞机
     for (let start = 3; start <= 13; start++) {
       for (let len = 2; len <= 6 && start + len - 1 <= 14; len++) {
@@ -1383,14 +1476,14 @@ function findValidPlays(hand, lastPlay) {
         if (valid) {
           // 纯飞机
           allPlays.push(plane);
-
+          
           // 飞机带单
           const remaining = sorted.filter(c => !plane.includes(c));
           if (remaining.length >= len) {
             const kickers = remaining.slice(0, len);
             allPlays.push([...plane, ...kickers]);
           }
-
+          
           // 飞机带对
           const remainingCountMap = getCountMap(remaining);
           const pairRanks = Object.entries(remainingCountMap).filter(([r, c]) => c >= 2);
@@ -1406,19 +1499,19 @@ function findValidPlays(hand, lastPlay) {
         }
       }
     }
-
+    
     // 炸弹
     for (const [rank, group] of Object.entries(rankGroups)) {
       if (group.length === 4) {
         allPlays.push(group);
       }
     }
-
+    
     // 火箭
     if (rankGroups[16] && rankGroups[17]) {
       allPlays.push([rankGroups[16][0], rankGroups[17][0]]);
     }
-
+    
     // 四带二
     for (const [rank, group] of Object.entries(rankGroups)) {
       if (group.length === 4) {
@@ -1442,7 +1535,7 @@ function findValidPlays(hand, lastPlay) {
     // 跟牌模式：需要管上
     const lastType = lastPlay.type ? lastPlay : detectType(lastPlay.cards);
     if (!lastType) return [];
-
+    
     switch (lastType.type) {
       case CARD_TYPE.SINGLE:
         for (const c of sorted) {
@@ -1451,7 +1544,7 @@ function findValidPlays(hand, lastPlay) {
           }
         }
         break;
-
+        
       case CARD_TYPE.PAIR:
         for (const [rank, group] of Object.entries(rankGroups)) {
           if (group.length >= 2 && parseInt(rank) > lastType.rank) {
@@ -1459,7 +1552,7 @@ function findValidPlays(hand, lastPlay) {
           }
         }
         break;
-
+        
       case CARD_TYPE.TRIPLE:
         for (const [rank, group] of Object.entries(rankGroups)) {
           if (group.length >= 3 && parseInt(rank) > lastType.rank) {
@@ -1467,7 +1560,7 @@ function findValidPlays(hand, lastPlay) {
           }
         }
         break;
-
+        
       case CARD_TYPE.TRIPLE_ONE: {
         const tripleRanks = Object.entries(rankGroups)
           .filter(([r, g]) => g.length >= 3 && parseInt(r) > lastType.rank)
@@ -1481,7 +1574,7 @@ function findValidPlays(hand, lastPlay) {
         }
         break;
       }
-
+        
       case CARD_TYPE.TRIPLE_TWO: {
         const tripleRanks = Object.entries(rankGroups)
           .filter(([r, g]) => g.length >= 3 && parseInt(r) > lastType.rank)
@@ -1498,7 +1591,7 @@ function findValidPlays(hand, lastPlay) {
         }
         break;
       }
-
+        
       case CARD_TYPE.STRAIGHT: {
         const len = lastType.length;
         for (let start = 3; start + len - 1 <= 14; start++) {
@@ -1519,7 +1612,7 @@ function findValidPlays(hand, lastPlay) {
         }
         break;
       }
-
+        
       case CARD_TYPE.DOUBLE_STRAIGHT: {
         const len = lastType.length;
         for (let start = 3; start + len - 1 <= 14; start++) {
@@ -1540,7 +1633,7 @@ function findValidPlays(hand, lastPlay) {
         }
         break;
       }
-
+        
       case CARD_TYPE.PLANE:
       case CARD_TYPE.PLANE_SINGLE:
       case CARD_TYPE.PLANE_PAIR: {
@@ -1587,7 +1680,7 @@ function findValidPlays(hand, lastPlay) {
         }
         break;
       }
-
+        
       case CARD_TYPE.BOMB: {
         // 更大的炸弹
         for (const [rank, group] of Object.entries(rankGroups)) {
@@ -1597,7 +1690,7 @@ function findValidPlays(hand, lastPlay) {
         }
         break;
       }
-
+        
       case CARD_TYPE.FOUR_TWO: {
         for (const [rank, group] of Object.entries(rankGroups)) {
           if (group.length === 4 && parseInt(rank) > lastType.rank) {
@@ -1610,7 +1703,7 @@ function findValidPlays(hand, lastPlay) {
         break;
       }
     }
-
+    
     // 炸弹和火箭可以管任何牌（除了被火箭管）
     if (lastType.type !== CARD_TYPE.ROCKET && lastType.type !== CARD_TYPE.BOMB) {
       // 炸弹
@@ -1632,7 +1725,7 @@ function findValidPlays(hand, lastPlay) {
       }
     }
   }
-
+  
   // 去重（比较牌面）
   const uniquePlays = [];
   const seen = new Set();
@@ -1643,7 +1736,7 @@ function findValidPlays(hand, lastPlay) {
       uniquePlays.push(play);
     }
   }
-
+  
   return uniquePlays;
 }
 
@@ -1670,6 +1763,116 @@ function getTypeName(type) {
   return TYPE_NAMES[type] || '未知';
 }
 
+// ==================== 斗地主 - 角色池 ====================
+// 每局从角色池随机抽取 2 个 AI 对手。
+// 每个角色：名字 / 头像 emoji / 标签 / 性格 / 语音映射（复用现有方言语音库）
+
+const CHARACTER_POOL = [
+  {
+    id: 'laohu',
+    name: '老胡',
+    avatar: '🧔',
+    tag: '东北大叔',
+    personality: 'aggressive',   // 豪爽激进：爱叫地主、爱炸
+    voice: 'laohu'               // 复用东北方言语音库
+  },
+  {
+    id: 'xiaodai',
+    name: '小呆',
+    avatar: '👩',
+    tag: '四川大妈',
+    personality: 'aggressive',   // 泼辣果断
+    voice: 'xiaodai'             // 复用四川方言语音库
+  },
+  {
+    id: 'guangdong',
+    name: '阿珍',
+    avatar: '👧',
+    tag: '粤语女生',
+    personality: 'balanced',     // 活泼稳健
+    voice: 'human'               // 复用粤语语音库
+  },
+  {
+    id: 'beijing',
+    name: '德叔',
+    avatar: '🧓',
+    tag: '北京大爷',
+    personality: 'balanced',     // 侃爷稳健
+    voice: 'laohu'               // 复用东北语音库（相近北方口音）
+  },
+  {
+    id: 'shanghai',
+    name: '王阿姨',
+    avatar: '👵',
+    tag: '上海阿姨',
+    personality: 'conservative', // 精明保守：少叫地主、留大牌
+    voice: 'xiaodai'             // 复用四川语音库
+  },
+  {
+    id: 'hunan',
+    name: '辣妹',
+    avatar: '💃',
+    tag: '湖南辣妹',
+    personality: 'aggressive',   // 火辣激进
+    voice: 'human'               // 复用粤语语音库
+  },
+  {
+    id: 'shandong',
+    name: '大壮',
+    avatar: '💪',
+    tag: '山东大汉',
+    personality: 'balanced',     // 憨厚稳健
+    voice: 'laohu'               // 复用东北语音库
+  },
+  {
+    id: 'yunnan',
+    name: '阿妹',
+    avatar: '👸',
+    tag: '云南阿妹',
+    personality: 'conservative', // 温柔保守
+    voice: 'human'               // 复用粤语语音库
+  }
+];
+
+/**
+ * 每局随机抽取 2 个 AI 对手（不重复，不抽中人类）
+ * @returns {Array} 两个对手角色对象 [players[1]角色, players[2]角色]
+ */
+function drawOpponents() {
+  const pool = [...CHARACTER_POOL];
+  // 洗牌
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return [pool[0], pool[1]];
+}
+
+/**
+ * 角色性格 -> 出牌风格参数
+ */
+const PERSONALITY_PARAMS = {
+  aggressive: {      // 激进：爱叫地主、爱用炸弹、管上就出
+    bidBonus: 3,     // 叫分加成
+    bombBias: 1.4,   // 炸弹使用倾向（高）
+    passTolerance: 0.6,  // 过牌容忍度（低=不爱过）
+    bigCardBias: 0.3     // 大牌早出倾向
+  },
+  balanced: {        // 稳健：合理出牌
+    bidBonus: 0,
+    bombBias: 1.0,
+    passTolerance: 1.0,
+    bigCardBias: 0.5
+  },
+  conservative: {    // 保守：少叫地主、留大牌、能过就过
+    bidBonus: -3,    // 叫分减成
+    bombBias: 0.7,   // 炸弹使用倾向（低）
+    passTolerance: 1.5,  // 过牌容忍度（高=爱过）
+    bigCardBias: 0.7     // 大牌保留倾向（高=晚出）
+  }
+};
+
+
 // ==================== 斗地主 - 游戏状态机 ====================
 
 class Game {
@@ -1682,10 +1885,12 @@ class Game {
   }
 
   reset() {
+    // 每局随机抽取 2 个 AI 对手（带头像/性格/语音映射）
+    const [opp1, opp2] = drawOpponents();
     this.players = [
-      { name: '你', hand: [], isLandlord: false, role: 'farmer' },
-      { name: '小呆', hand: [], isLandlord: false, role: 'farmer' },
-      { name: '老胡', hand: [], isLandlord: false, role: 'farmer' }
+      { name: '你', hand: [], isLandlord: false, role: 'farmer', avatar: '😎', personality: 'balanced', voice: 'human', charId: 'you' },
+      { name: opp1.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp1.avatar, personality: opp1.personality, voice: opp1.voice, charId: opp1.id, tag: opp1.tag },
+      { name: opp2.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp2.avatar, personality: opp2.personality, voice: opp2.voice, charId: opp2.id, tag: opp2.tag }
     ];
     this.landlordCards = [];
     this.currentPlayer = 0;
@@ -1711,7 +1916,7 @@ class Game {
   startGame() {
     this.reset();
     this.phase = 'dealing';
-
+    
     // 洗牌发牌
     this.deck = createDeck();
     const [p0, p1, p2, landlord] = deal(this.deck);
@@ -1720,9 +1925,9 @@ class Game {
     this.players[2].hand = sortCards(p2);
     this.landlordCards = landlord;
     this.dealt = true;
-
+    
     this._notifyState();
-
+    
     // 进入叫地主阶段
     setTimeout(() => this.startBidding(), 800);
   }
@@ -1734,7 +1939,7 @@ class Game {
     this.phase = 'bidding';
     this.bidCount = 0;
     this.bidHistory = [];
-
+    
     // 随机选择开始叫牌的玩家
     this.currentPlayer = Math.floor(Math.random() * 3);
     this._notifyState();
@@ -1748,16 +1953,16 @@ class Game {
   handleBid(playerIndex, score) {
     if (this.phase !== 'bidding') return false;
     if (playerIndex !== this.currentPlayer) return false;
-
+    
     this.bidHistory.push({ player: playerIndex, score });
     this.bidCount++;
-
+    
     // 如果叫了3分，直接成为地主
     if (score === 3) {
       this._setLandlord(playerIndex);
       return true;
     }
-
+    
     // 检查是否所有人都叫过了
     if (this.bidCount >= 3) {
       // 找最高分
@@ -1772,7 +1977,7 @@ class Game {
       }
       return true;
     }
-
+    
     // 下一家
     this.currentPlayer = (this.currentPlayer + 1) % 3;
     this._notifyState();
@@ -1786,18 +1991,18 @@ class Game {
     this.landlord = playerIndex;
     this.players[playerIndex].isLandlord = true;
     this.players[playerIndex].role = 'landlord';
-
+    
     // 地主获得底牌
     this.players[playerIndex].hand = sortCards([...this.players[playerIndex].hand, ...this.landlordCards]);
-
+    
     this.phase = 'playing';
     this.currentPlayer = playerIndex;
     this.lastPlay = null;
     this.lastPlayer = -1;
     this.passCount = 0;
-
+    
     this._notifyState();
-
+    
     if (this.onBidEnd) {
       this.onBidEnd(playerIndex);
     }
@@ -1812,9 +2017,9 @@ class Game {
   handlePlay(playerIndex, cards) {
     if (this.phase !== 'playing') return false;
     if (playerIndex !== this.currentPlayer) return false;
-
+    
     const isPass = !cards || cards.length === 0;
-
+    
     if (isPass) {
       // 不能过牌（上一轮是自己出的，或者没人出牌）
       if (this.lastPlayer === playerIndex || this.lastPlayer === -1) {
@@ -1825,7 +2030,7 @@ class Game {
       this._nextPlayer();
       return true;
     }
-
+    
     // 验证牌是否在手牌中
     const handCopy = [...this.players[playerIndex].hand];
     for (const card of cards) {
@@ -1833,18 +2038,18 @@ class Game {
       if (idx === -1) return false;
       handCopy.splice(idx, 1);
     }
-
+    
     // 检测牌型
     const type = detectType(cards);
     if (!type) return false;
-
+    
     // 检查是否能管上
     const lastPlayObj = this.lastPlayer === playerIndex ? null : this.lastPlay;
     if (lastPlayObj && lastPlayObj.player !== playerIndex) {
       const lastPlayInfo = { cards: lastPlayObj.cards, type: lastPlayObj.type, rank: lastPlayObj.rank, length: lastPlayObj.length };
       if (!canBeat(cards, lastPlayInfo)) return false;
     }
-
+    
     // 出牌合法，更新状态
     this.players[playerIndex].hand = handCopy;
     this.lastPlay = {
@@ -1857,9 +2062,9 @@ class Game {
     this.lastPlayer = playerIndex;
     this.passCount = 0;
     this.playHistory.push({ player: playerIndex, cards, type: type.type });
-
+    
     this._notifyState();
-
+    
     // 检查是否出完
     if (this.players[playerIndex].hand.length === 0) {
       this.phase = 'ended';
@@ -1870,7 +2075,7 @@ class Game {
       }
       return true;
     }
-
+    
     this._nextPlayer();
     return true;
   }
@@ -1880,14 +2085,14 @@ class Game {
    */
   _nextPlayer() {
     this.currentPlayer = (this.currentPlayer + 1) % 3;
-
+    
     // 如果已经有两人过牌，且上一手出牌的人是自己，清空 lastPlay
     if (this.passCount >= 2) {
       this.lastPlayer = this.currentPlayer;
       this.lastPlay = null;
       this.passCount = 0;
     }
-
+    
     this._notifyState();
   }
 
@@ -1901,7 +2106,12 @@ class Game {
         handCount: p.hand.length,
         hand: p.hand,
         isLandlord: p.isLandlord,
-        role: p.role
+        role: p.role,
+        avatar: p.avatar,
+        personality: p.personality,
+        voice: p.voice,
+        tag: p.tag,
+        charId: p.charId
       })),
       landlordCards: this.landlordCards,
       currentPlayer: this.currentPlayer,
@@ -1942,37 +2152,42 @@ class Game {
  */
 
 /**
- * 评估手牌质量，决定叫分
+ * 评估手牌质量，决定叫分（按性格调整）
  * @param {Array} hand - 手牌
  * @param {number} currentBid - 当前最高叫分
+ * @param {string} personality - 性格（aggressive/balanced/conservative）
  * @returns {number} 叫分 (0-3)
  */
-function decideBid(hand, currentBid) {
+function decideBid(hand, currentBid, personality) {
   if (currentBid >= 3) return 0;
-
+  
   let score = 0;
   const countMap = getCountMap(hand);
-
+  
   // 炸弹加分
   for (const [rank, count] of Object.entries(countMap)) {
     if (count === 4) score += 6;
   }
-
+  
   // 王加分
   if (hand.some(c => c.rank === 17)) score += 4; // 大王
   if (hand.some(c => c.rank === 16)) score += 3; // 小王
-
+  
   // 2加分
   const twoCount = countMap[15] || 0;
   score += twoCount * 2;
-
+  
   // A加分
   const aceCount = countMap[14] || 0;
   score += aceCount * 1;
-
+  
   // 牌总数多也加分
   if (hand.length >= 17) score += 1;
-
+  
+  // 性格调整：激进爱叫地主 / 保守少叫
+  const params = PERSONALITY_PARAMS[personality] || PERSONALITY_PARAMS['balanced'];
+  score += params.bidBonus;
+  
   // 决定叫分
   if (score >= 12) return 3;
   if (score >= 8) return 2;
@@ -1989,24 +2204,25 @@ function decideBid(hand, currentBid) {
  * @param {number} currentPlayer - 当前玩家索引
  * @returns {Array|null} 要出的牌，或 null 表示过牌
  */
-function choosePlay(hand, lastPlay, lastPlayer, isLandlord, currentPlayer, landlord) {
+function choosePlay(hand, lastPlay, lastPlayer, isLandlord, currentPlayer, landlord, personality) {
   const validPlays = findValidPlays(hand, lastPlay);
-
+  
   if (validPlays.length === 0) return null;
-
+  
   if (!lastPlay || !lastPlay.cards || lastPlay.cards.length === 0) {
     // 自由出牌
-    return chooseFreePlay(hand, validPlays, isLandlord);
+    return chooseFreePlay(hand, validPlays, isLandlord, personality);
   } else {
     // 跟牌
-    return chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, currentPlayer, landlord);
+    return chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, currentPlayer, landlord, personality);
   }
 }
 
 /**
- * 自由出牌策略
+ * 自由出牌策略（按性格调整：激进早出大牌/炸弹，保守留大牌）
  */
-function chooseFreePlay(hand, validPlays, isLandlord) {
+function chooseFreePlay(hand, validPlays, isLandlord, personality) {
+  const params = PERSONALITY_PARAMS[personality] || PERSONALITY_PARAMS['balanced'];
   // 按牌型分组
   const grouped = {
     singles: [],
@@ -2023,7 +2239,7 @@ function chooseFreePlay(hand, validPlays, isLandlord) {
     rockets: [],
     fourTwos: []
   };
-
+  
   for (const play of validPlays) {
     const type = detectType(play);
     if (!type) continue;
@@ -2043,21 +2259,23 @@ function chooseFreePlay(hand, validPlays, isLandlord) {
       case CARD_TYPE.FOUR_TWO: grouped.fourTwos.push(play); break;
     }
   }
-
+  
   // 如果手牌很少（<=4张），直接出大牌
   if (hand.length <= 4) {
     // 有火箭先出火箭
     if (grouped.rockets.length > 0) return grouped.rockets[0];
-    // 有炸弹出炸弹
-    if (grouped.bombs.length > 0) return grouped.bombs[0];
+    // 有炸弹出炸弹（激进型更早炸）
+    if (grouped.bombs.length > 0 && (personality === 'aggressive' || hand.length <= 2 || Math.random() < params.bombBias)) {
+      return grouped.bombs[0];
+    }
     // 出最大的牌型
     for (const play of validPlays) {
       if (play.length === hand.length) return play;
     }
   }
-
+  
   // 优先出小牌
-
+  
   // 1. 出顺子（如果有较长的顺子）
   if (grouped.straights.length > 0) {
     // 选最小的顺子
@@ -2067,7 +2285,7 @@ function chooseFreePlay(hand, validPlays, isLandlord) {
     });
     return minStraight;
   }
-
+  
   // 2. 出连对
   if (grouped.doubleStraights.length > 0) {
     const minDS = grouped.doubleStraights.reduce((min, p) => {
@@ -2076,7 +2294,7 @@ function chooseFreePlay(hand, validPlays, isLandlord) {
     });
     return minDS;
   }
-
+  
   // 3. 出飞机
   if (grouped.planes.length > 0) {
     return grouped.planes[0];
@@ -2087,7 +2305,7 @@ function chooseFreePlay(hand, validPlays, isLandlord) {
   if (grouped.planePairs.length > 0) {
     return grouped.planePairs[0];
   }
-
+  
   // 4. 出三带（先出最小的）
   if (grouped.tripleOnes.length > 0) {
     return grouped.tripleOnes[grouped.tripleOnes.length - 1];
@@ -2098,39 +2316,47 @@ function chooseFreePlay(hand, validPlays, isLandlord) {
   if (grouped.triples.length > 0) {
     return grouped.triples[grouped.triples.length - 1];
   }
-
+  
   // 5. 出对子（先出小对）
   if (grouped.pairs.length > 0) {
     // findValidPlays生成顺序是降序，取最后一个（最小）
     return grouped.pairs[grouped.pairs.length - 1];
   }
-
+  
   // 6. 出单张（先出最小单张）
   if (grouped.singles.length > 0) {
     // findValidPlays生成顺序是降序，取最后一个（最小）
     return grouped.singles[grouped.singles.length - 1];
   }
-
+  
   // 7. 出四带二
   if (grouped.fourTwos.length > 0) {
     return grouped.fourTwos[grouped.fourTwos.length - 1];
   }
-
-  // 8. 出炸弹（最后出，迫不得已）
+  
+  // 8. 出炸弹（激进型提前炸抢牌权；稳健/保守留到最后）
   if (grouped.bombs.length > 0) {
-    return grouped.bombs[grouped.bombs.length - 1];
+    // 激进：有炸弹就喜欢炸（约 60% 概率提前出）
+    if (personality === 'aggressive' && Math.random() < 0.6) {
+      return grouped.bombs[grouped.bombs.length - 1];
+    }
+    if (personality !== 'conservative' && Math.random() < 0.2) {
+      return grouped.bombs[grouped.bombs.length - 1];
+    }
   }
-  if (grouped.rockets.length > 0) {
+  if (grouped.rockets.length > 0 && personality !== 'conservative') {
     return grouped.rockets[grouped.rockets.length - 1];
   }
-
+  
   return validPlays[0];
 }
 
 /**
- * 跟牌策略
+ * 跟牌策略（按性格调整）
  */
-function chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, currentPlayer, landlord) {
+function chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, currentPlayer, landlord, personality) {
+  const params = PERSONALITY_PARAMS[personality] || PERSONALITY_PARAMS['balanced'];
+  
   // 判断上一手出牌的人是不是队友
   let isPartner = false;
   if (!isLandlord) {
@@ -2139,20 +2365,24 @@ function chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, cu
     isPartner = lastPlayer === partnerIndex;
   }
   // 地主没有队友，所以 isPartner 保持 false
-
-  // 队友出的牌，且自己牌不多时可以考虑过
+  
+  // 队友出的牌：激进型继续跟（抢出牌权），稳健/保守让队友走
   if (isPartner) {
     // 如果手牌很少，有机会出完，就继续出
     if (hand.length <= 3) {
       // 找最小的能管上的牌
       return validPlays[validPlays.length - 1];
     }
+    // 激进型：即使队友出牌也想出牌（减少过牌）
+    if (personality === 'aggressive' && Math.random() < 0.5) {
+      return validPlays[validPlays.length - 1];
+    }
     // 否则过牌，让队友继续
     return null;
   }
-
+  
   // 对手出的牌，尽量管上
-
+  
   // 按 rank 分类
   const playsByRank = {};
   for (const play of validPlays) {
@@ -2163,12 +2393,12 @@ function chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, cu
       playsByRank[key].push(play);
     }
   }
-
+  
   // 分离炸弹和普通牌
   const normalPlays = [];
   const bombPlays = [];
   const rocketPlays = [];
-
+  
   for (const play of validPlays) {
     const type = detectType(play);
     if (!type) continue;
@@ -2180,7 +2410,17 @@ function chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, cu
       normalPlays.push(play);
     }
   }
-
+  
+  // 保守型：对手出大牌时，普通牌管不上就过（保留炸弹，不硬管）
+  if (personality === 'conservative' && normalPlays.length > 0) {
+    const lastType = detectType(lastPlay.cards);
+    const lastRank = lastType ? lastType.rank : 0;
+    // 如果对手出的牌很大（rank > 12），保守型倾向过牌保留炸弹
+    if (lastRank > 12 && bombPlays.length > 0 && hand.length > 4 && Math.random() < 0.6) {
+      return null;
+    }
+  }
+  
   // 优先用普通牌管上，保留炸弹和火箭
   if (normalPlays.length > 0) {
     // 选择最小的能管上的牌（findValidPlays生成顺序是降序，取最后一个）
@@ -2196,18 +2436,18 @@ function chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, cu
     // 一般情况，用最小的管上
     return normalPlays[normalPlays.length - 1];
   }
-
+  
   // 如果手牌很少（<=2张），可以考虑用炸弹抢出牌权
   if (hand.length <= 4 && bombPlays.length > 0) {
     return bombPlays[0];
   }
-
+  
   // 如果对方只剩很少牌，用炸弹抢牌权
   // （简化版：不跟踪对手剩余牌数，直接判断）
   if (bombPlays.length > 0 && hand.length <= 6) {
     return bombPlays[0];
   }
-
+  
   // 用炸弹（如果对方出的不是炸弹）
   const lastPlayType = lastPlay.type || detectType(lastPlay.cards);
   if (lastPlayType && lastPlayType.type !== CARD_TYPE.BOMB && lastPlayType.type !== CARD_TYPE.ROCKET) {
@@ -2220,7 +2460,7 @@ function chooseFollowPlay(hand, validPlays, lastPlay, lastPlayer, isLandlord, cu
     if (rocketPlays.length > 0) return rocketPlays[rocketPlays.length - 1];
     if (bombPlays.length > 0) return bombPlays[bombPlays.length - 1];
   }
-
+  
   // 真的管不上，过牌
   return null;
 }
@@ -2252,6 +2492,9 @@ class Renderer {
       document.getElementById('player-2')
     ];
     this.el.playArea = document.getElementById('play-area');
+    this.el.playFront0 = document.getElementById('play-front-0');
+    this.el.playFront1 = document.getElementById('play-front-1');
+    this.el.playFront2 = document.getElementById('play-front-2');
     this.el.landlordCards = document.getElementById('landlord-cards');
     this.el.handCards = document.getElementById('hand-cards');
     this.el.controls = document.getElementById('controls');
@@ -2261,40 +2504,39 @@ class Renderer {
     this.el.bgmToggle = document.getElementById('bgm-toggle');
     this.el.restartBtn = document.getElementById('restart-btn');
     this.el.playHistory = document.getElementById('history-list');
-
+    
     // 本局出牌历史
     this._historyCleared = false;
-
+    
     // 当前出牌区显示的牌（player + 牌key），用于判断是否需要更新（pass 时保留旧牌）
     this._displayedPlayKey = null;
-
+    
+    // 出牌堆永久累积，不清空（玩家出的牌一直留在桌上，直到新一局/游戏结束才收走）
+    this._roundEnded = false;
+    
     // 玩家信息DOM
     this.el.playerInfo = [
       this.el.playerAreas[0].querySelector('.player-info'),
       this.el.playerAreas[1].querySelector('.player-info'),
       this.el.playerAreas[2].querySelector('.player-info')
     ];
-
-    // 出牌区域
-    this.el.playSlots = [
-      this.el.playArea.querySelector('.play-slot-0'),
-      this.el.playArea.querySelector('.play-slot-1'),
-      this.el.playArea.querySelector('.play-slot-2')
-    ];
-
+    
+    // 出牌区：中间堆放容器（真实打牌，牌凌乱堆在桌中间）
+    this.el.playStack = this.el.playArea.querySelector('#play-stack');
+    
     // 回调
     this.onPlay = null;
     this.onPass = null;
     this.onBid = null;
     this.onHint = null;
-
+    
     // 当前选中的牌
     this.selectedIndices = new Set();
     this.currentHand = [];
-
+    
     // 音量滑块
     this.el.bgmVolume = document.getElementById('bgm-volume');
-
+    
     // 绑定事件
     this._bindEvents();
   }
@@ -2306,7 +2548,7 @@ class Renderer {
     this.renderPlayerInfo(0, state.players[0]);
     this.renderPlayerInfo(1, state.players[1]);
     this.renderPlayerInfo(2, state.players[2]);
-
+    
     // 新一局开始时清空出牌历史
     if (state.phase === 'bidding') {
       if (!this._historyCleared) {
@@ -2316,33 +2558,33 @@ class Renderer {
     } else {
       this._historyCleared = false;
     }
-
+    
     // 底牌（只有地主确定后才显示）
     if (state.landlord !== -1) {
       this.renderLandlordCards(state.landlordCards, true);
     } else {
       this.renderLandlordCards(state.landlordCards, false);
     }
-
+    
     // 玩家手牌
     this.renderPlayerHand(0, state.players[0].hand, state.currentPlayer === 0);
-
+    
     // 出牌区
     this.renderPlayArea(state);
-
+    
     // 状态消息
     this.updateStatus(state);
-
+    
     // 高亮当前玩家
     this._highlightCurrentPlayer(state.currentPlayer, state.phase);
-
+    
     // 显示叫地主UI
     if (state.phase === 'bidding' && state.currentPlayer === 0) {
       this.showBiddingUI(state);
     } else {
       this.hideBiddingUI();
     }
-
+    
     // 显示/隐藏出牌UI
     if (state.phase === 'playing') {
       const isHuman = state.currentPlayer === 0;
@@ -2355,7 +2597,7 @@ class Renderer {
     } else {
       this.hidePlayingUI();
     }
-
+    
     // 显示胜利信息
     if (state.phase === 'ended') {
       this.showWinner(state);
@@ -2367,29 +2609,29 @@ class Renderer {
    */
   renderPlayerHand(playerIndex, cards, isCurrent) {
     if (playerIndex !== 0) return; // 只渲染人类玩家的手牌
-
+    
     this.currentHand = cards;
     const container = this.el.handCards;
     container.innerHTML = '';
-
+    
     if (!cards || cards.length === 0) return;
-
+    
     const sorted = sortCards(cards);
-
+    
     for (let i = 0; i < sorted.length; i++) {
       const card = sorted[i];
       const display = cardDisplay(card);
       const cardEl = document.createElement('div');
       cardEl.className = 'card';
       cardEl.dataset.index = i;
-
+      
       if (this.selectedIndices.has(i)) {
         cardEl.classList.add('selected');
       }
-
+      
       const isRed = display.isRed;
       const colorClass = isRed ? 'card-red' : 'card-black';
-
+      
       if (card.suit === 'joker') {
         cardEl.classList.add('card-joker', card.rank === 17 ? 'card-red' : 'card-black');
         cardEl.innerHTML = `
@@ -2414,7 +2656,7 @@ class Renderer {
           </div>
         `;
       }
-
+      
       cardEl.addEventListener('click', () => this._handleCardClick(i));
       cardEl.addEventListener('mouseenter', () => {
         if (!this.selectedIndices.has(i)) {
@@ -2424,15 +2666,15 @@ class Renderer {
       cardEl.addEventListener('mouseleave', () => {
         cardEl.classList.remove('hover');
       });
-
+      
       container.appendChild(cardEl);
     }
   }
 
   /**
-   * 渲染出牌区
-   * 只有出牌发生变化时才重建（新手牌替换旧牌）；pass 或同一手牌时保留，
-   * 这样牌会堆在桌子上，直到下一个人真的出了牌才消失。
+   * 渲染出牌区（真实打牌模拟）
+   * 出的牌带随机偏移/旋转凌乱地堆在牌桌中间，永久累积保留；
+   * 一圈结束（两人 pass）后牌仍留在桌上，直到新一局/游戏结束才清空。
    */
   renderPlayArea(state) {
     // 新一局（叫牌阶段）或游戏结束：清空出牌区
@@ -2442,10 +2684,14 @@ class Renderer {
     }
     const lastPlay = state.lastPlay || null;
     const key = this._playKey(lastPlay);
-    if (key === this._displayedPlayKey) return; // 无变化，保留现有出牌区
-    if (!lastPlay) return; // 新一轮开始（pass 清空 lastPlay）：保留上一手牌，等下一个真实出牌替换
+    if (key === this._displayedPlayKey) return; // 已在 animatePlayCards 流程中
+    if (!lastPlay) {
+      // 一圈结束（两人 pass 触发新一轮）：牌继续永久留在桌上，不清空
+      return;
+    }
+    // lastPlay 变化但未经过 animatePlayCards（防御性）：走完整"前方展示→汇入中心"流程
+    this.animatePlayCards(lastPlay.player, lastPlay.cards);
     this._displayedPlayKey = key;
-    this._renderPlay(lastPlay.player, lastPlay.cards, lastPlay.type);
   }
 
   /**
@@ -2467,26 +2713,41 @@ class Renderer {
   }
 
   /**
-   * 清空所有槽位并把一手牌渲染到对应玩家的出牌槽
+   * 把一手牌凌乱地丢到牌桌中间（真实打牌模拟）
+   * 整手牌带随机偏移与旋转；每张牌再带微小的随机偏移/旋转，模拟散落
    */
-  _renderPlay(playerIndex, cards, type) {
-    for (const slot of this.el.playSlots) {
-      slot.innerHTML = '';
-    }
-    const slot = this.el.playSlots[playerIndex];
-    if (!slot || !cards) return;
+  _addToStack(playerIndex, cards, type) {
+    if (!this.el.playStack || !cards) return;
 
-    // 牌横向排列容器
-    const row = document.createElement('div');
-    row.className = 'cards-row';
+    // 真实打牌：牌凌乱堆在桌中间。
+    // 用行列基础位置（避免全叠成一团不可见）+ 每手大幅随机抖动/旋转（凌乱自然）
+    const existing = this.el.playStack.querySelectorAll('.played-hand').length;
+    const col = existing % 3;
+    const row = Math.floor(existing / 3) % 2;
+    const baseX = (col - 1) * 130;         // 列基础偏移：-130 / 0 / +130
+    const baseY = (row === 0 ? -35 : 35);  // 行基础偏移：上排 -35 / 下排 +35
+    const dx = baseX + (Math.random() - 0.5) * 90;   // 大幅随机抖动 ±45
+    const dy = baseY + (Math.random() - 0.5) * 60;   // ±30
+    const rot = (Math.random() - 0.5) * 28;          // -14° ~ +14° 随机旋转
+    const hand = document.createElement('div');
+    hand.className = 'played-hand';
+    hand.style.transform = `translate(calc(-50% + ${dx.toFixed(1)}px), calc(-50% + ${dy.toFixed(1)}px)) rotate(${rot.toFixed(1)}deg)`;
+
+    const inner = document.createElement('div');
+    inner.className = 'played-hand-inner';
 
     for (const card of cards) {
       const display = cardDisplay(card);
+      const isRed = display.isRed;
+      const colorClass = isRed ? 'card-red' : 'card-black';
       const cardEl = document.createElement('div');
       cardEl.className = 'card card-small card-animate-in';
 
-      const isRed = display.isRed;
-      const colorClass = isRed ? 'card-red' : 'card-black';
+      // 每张牌微小的随机偏移与旋转（更凌乱自然）
+      const crot = (Math.random() - 0.5) * 14;
+      const cx = (Math.random() - 0.5) * 10;
+      const cy = (Math.random() - 0.5) * 10;
+      cardEl.style.transform = `translate(${cx.toFixed(1)}px, ${cy.toFixed(1)}px) rotate(${crot.toFixed(1)}deg)`;
 
       if (card.suit === 'joker') {
         cardEl.classList.add('card-joker', card.rank === 17 ? 'card-red' : 'card-black');
@@ -2506,19 +2767,21 @@ class Renderer {
         `;
       }
 
-      row.appendChild(cardEl);
+      inner.appendChild(cardEl);
     }
 
-    slot.appendChild(row);
+    hand.appendChild(inner);
 
-    // 显示牌型
+    // 牌型标签（提示出的什么牌型）
     if (type != null) {
       const typeName = getTypeName(type);
       const label = document.createElement('div');
       label.className = 'play-type-label';
       label.textContent = typeName;
-      slot.appendChild(label);
+      hand.appendChild(label);
     }
+
+    this.el.playStack.appendChild(hand);
   }
 
   /**
@@ -2527,18 +2790,18 @@ class Renderer {
   renderLandlordCards(cards, showFace) {
     const container = this.el.landlordCards;
     container.innerHTML = '';
-
+    
     if (!cards || cards.length === 0) return;
-
+    
     for (const card of cards) {
       const cardEl = document.createElement('div');
       cardEl.className = 'card card-small';
-
+      
       if (showFace) {
         const display = cardDisplay(card);
         const isRed = display.isRed;
         const colorClass = isRed ? 'card-red' : 'card-black';
-
+        
         if (card.suit === 'joker') {
           cardEl.classList.add('card-joker', card.rank === 17 ? 'card-red' : 'card-black');
           cardEl.innerHTML = `
@@ -2560,7 +2823,7 @@ class Renderer {
         cardEl.classList.add('card-back');
         cardEl.innerHTML = '<div class="card-back-pattern">🂠</div>';
       }
-
+      
       container.appendChild(cardEl);
     }
   }
@@ -2571,16 +2834,18 @@ class Renderer {
   renderPlayerInfo(playerIndex, player) {
     const info = this.el.playerInfo[playerIndex];
     if (!info) return;
-
+    
     const roleIcon = player.role === 'landlord' ? '👑' : '🌾';
     const roleText = player.role === 'landlord' ? '地主' : '农民';
-
+    const avatar = player.avatar || (playerIndex === 0 ? '😎' : '🤖');
+    const tag = player.tag ? `<span class="player-tag">${player.tag}</span>` : '';
+    
     info.innerHTML = `
       <div class="player-avatar" style="background-color: ${this._getAvatarColor(playerIndex)}">
-        ${player.name.charAt(0)}
+        ${avatar}
       </div>
       <div class="player-details">
-        <div class="player-name">${player.name}</div>
+        <div class="player-name">${player.name} ${tag}</div>
         <div class="player-role">${roleIcon} ${roleText}</div>
         <div class="player-cards-count">剩余: ${player.handCount}张</div>
       </div>
@@ -2594,15 +2859,15 @@ class Renderer {
     const container = this.el.bidControls;
     container.style.display = 'flex';
     container.innerHTML = '';
-
+    
     const title = document.createElement('div');
     title.className = 'bid-title';
     title.textContent = '叫地主';
     container.appendChild(title);
-
+    
     const buttonsDiv = document.createElement('div');
     buttonsDiv.className = 'bid-buttons';
-
+    
     // 不叫
     const passBtn = document.createElement('button');
     passBtn.className = 'btn btn-pass';
@@ -2611,7 +2876,7 @@ class Renderer {
       if (this.onBid) this.onBid(0);
     });
     buttonsDiv.appendChild(passBtn);
-
+    
     // 1分
     if (state.bidHistory.length === 0 || state.bidHistory.every(b => b.score < 1)) {
       const b1 = document.createElement('button');
@@ -2622,7 +2887,7 @@ class Renderer {
       });
       buttonsDiv.appendChild(b1);
     }
-
+    
     // 2分
     if (state.bidHistory.length === 0 || state.bidHistory.every(b => b.score < 2)) {
       const b2 = document.createElement('button');
@@ -2633,7 +2898,7 @@ class Renderer {
       });
       buttonsDiv.appendChild(b2);
     }
-
+    
     // 3分
     if (state.bidHistory.length === 0 || state.bidHistory.every(b => b.score < 3)) {
       const b3 = document.createElement('button');
@@ -2644,9 +2909,9 @@ class Renderer {
       });
       buttonsDiv.appendChild(b3);
     }
-
+    
     container.appendChild(buttonsDiv);
-
+    
     // 显示叫牌历史
     const historyDiv = document.createElement('div');
     historyDiv.className = 'bid-history';
@@ -2672,7 +2937,7 @@ class Renderer {
     const container = this.el.controls;
     container.style.display = 'flex';
     container.innerHTML = '';
-
+    
     // 出牌按钮
     const playBtn = document.createElement('button');
     playBtn.className = 'btn btn-play';
@@ -2683,7 +2948,7 @@ class Renderer {
       if (this.onPlay) this.onPlay(selectedCards);
     });
     container.appendChild(playBtn);
-
+    
     // 不出按钮
     const passBtn = document.createElement('button');
     passBtn.className = 'btn btn-pass';
@@ -2692,7 +2957,7 @@ class Renderer {
       if (this.onPass) this.onPass();
     });
     container.appendChild(passBtn);
-
+    
     // 提示按钮
     const hintBtn = document.createElement('button');
     hintBtn.className = 'btn btn-hint';
@@ -2724,13 +2989,13 @@ class Renderer {
   showWinner(state) {
     const winner = state.winner;
     if (winner === null) return;
-
+    
     const winnerName = state.players[winner].name;
     const isLandlordWin = state.players[winner].isLandlord;
     const team = isLandlordWin ? '地主' : '农民';
-
+    
     this.showMessage(`🎉 ${winnerName} 获胜！${team}方胜利！🎉`);
-
+    
     // 创建胜利动画
     const overlay = document.createElement('div');
     overlay.className = 'victory-overlay';
@@ -2743,7 +3008,7 @@ class Renderer {
       </div>
     `;
     document.body.appendChild(overlay);
-
+    
     // 创建彩纸效果
     this._createConfetti();
   }
@@ -2753,7 +3018,7 @@ class Renderer {
    */
   updateStatus(state) {
     let msg = '';
-
+    
     switch (state.phase) {
       case 'idle':
         msg = '点击"开始游戏"';
@@ -2776,33 +3041,119 @@ class Renderer {
         msg = '游戏结束';
         break;
     }
-
+    
     this.showMessage(msg);
   }
 
   /**
-   * 出牌动画（立即显示新手牌，替换上一手牌；牌会堆在桌子上直到下家出牌）
+   * 出牌动画（复刻真实打牌）：
+   * 1) 牌先出现在出牌者前方（人类=下方 / AI-1=右侧 / AI-2=左侧）展示这一手
+   * 2) 停留约 900ms 让人看清谁出了什么
+   * 3) 然后飞向桌子中心，加入散乱牌堆（永久累积）
    */
   animatePlayCards(playerIndex, cards) {
-    if (this.el.playSlots[playerIndex] == null) return;
-
+    if (this.el.playStack == null) return;
+    
     // 记录到顶部出牌历史
     this.addToHistory(playerIndex, cards);
-
-    // 计算新手牌的 key（排序稳定）并立即渲染（替换上一手牌）
+    
+    // 1) 在出牌者前方展示这一手
+    const frontEl = this.el['playFront' + playerIndex];
+    if (frontEl) {
+      this._showPlayFront(frontEl, cards);
+    }
+    
+    // 2) 延迟后汇入中心散乱牌堆
     const key = playerIndex + '|' + this._cardsKey(cards);
-    this._displayedPlayKey = key;
     const t = detectType(cards);
-    this._renderPlay(playerIndex, cards, t ? t.type : null);
+    setTimeout(() => {
+      // 3) 飞向中心牌堆
+      this._flyFrontToStack(frontEl, playerIndex, cards, t ? t.type : null);
+      this._displayedPlayKey = key;
+      // 牌堆上限控制：超过 MAX_HANDS 手时最旧一手淡出移除
+      this._trimStack();
+    }, 900);
   }
 
   /**
-   * 清空出牌区
+   * 在玩家前方展示位显示这一手牌
+   */
+  _showPlayFront(frontEl, cards) {
+    frontEl.innerHTML = '';
+    for (const card of cards) {
+      const display = cardDisplay(card);
+      const isRed = display.isRed;
+      const colorClass = isRed ? 'card-red' : 'card-black';
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card card-animate-in';
+      if (card.suit === 'joker') {
+        cardEl.classList.add('card-joker', card.rank === 17 ? 'card-red' : 'card-black');
+        cardEl.innerHTML = `
+          <div class="card-corner top-left"><span class="card-rank">${display.display}</span></div>
+          <div class="card-center">${card.rank === 17 ? '🃏👑' : '🃏'}</div>
+          <div class="card-corner bottom-right"><span class="card-rank">${display.display}</span></div>
+        `;
+      } else {
+        cardEl.innerHTML = `
+          <div class="card-corner top-left ${colorClass}">
+            <span class="card-rank">${display.display}</span>
+            <span class="card-suit">${display.suitSymbol}</span>
+          </div>
+          <div class="card-center ${colorClass}">${display.suitSymbol}</div>
+          <div class="card-corner bottom-right ${colorClass}">
+            <span class="card-rank">${display.display}</span>
+            <span class="card-suit">${display.suitSymbol}</span>
+          </div>
+        `;
+      }
+      frontEl.appendChild(cardEl);
+    }
+    frontEl.classList.add('show');
+  }
+
+  /**
+   * 把展示位的牌飞向中心牌堆：淡出展示位，同时把同款牌加入中心散乱牌堆
+   */
+  _flyFrontToStack(frontEl, playerIndex, cards, type) {
+    // 展示位淡出
+    if (frontEl) {
+      frontEl.classList.remove('show');
+      setTimeout(() => { if (frontEl) frontEl.innerHTML = ''; }, 250);
+    }
+    // 中心牌堆加入这一手（散乱堆叠）
+    this._addToStack(playerIndex, cards, type);
+  }
+
+  /**
+   * 牌堆上限控制：超过 15 手时最旧一手淡出移除
+   * （一局最多 3 人 × 手牌 20 张，通常 15-20 手；保留最近 15 手足够看清）
+   */
+  _trimStack() {
+    if (!this.el.playStack) return;
+    const MAX_HANDS = 15;
+    const hands = this.el.playStack.querySelectorAll('.played-hand');
+    if (hands.length <= MAX_HANDS) return;
+    const oldest = hands[0];
+    oldest.classList.add('played-hand-fade-out');
+    oldest.addEventListener('animationend', () => oldest.remove(), { once: true });
+    // 兜底：动画未触发也移除
+    setTimeout(() => { if (oldest.parentNode) oldest.remove(); }, 700);
+  }
+
+  /**
+   * 清空出牌区（牌堆 + 玩家前方展示位）
    */
   clearPlayArea() {
     this._displayedPlayKey = null;
-    for (const slot of this.el.playSlots) {
-      slot.innerHTML = '';
+    if (this.el.playStack) {
+      this.el.playStack.innerHTML = '';
+    }
+    for (let i = 0; i < 3; i++) {
+      const frontEl = this.el['playFront' + i];
+      if (frontEl) {
+        frontEl.classList.remove('show');
+        frontEl.innerHTML = '';
+      }
     }
   }
 
@@ -2813,20 +3164,20 @@ class Renderer {
    */
   addToHistory(playerIndex, cards) {
     if (!this.el.playHistory || !cards || cards.length === 0) return;
-
+    
     const names = ['你', '小呆', '老胡'];
     const row = document.createElement('div');
     row.className = 'history-row';
-
+    
     const nameEl = document.createElement('span');
     nameEl.className = 'history-player-name';
     nameEl.textContent = names[playerIndex] || ('P' + playerIndex);
     row.appendChild(nameEl);
-
+    
     for (const card of cards) {
       const tiny = document.createElement('span');
       tiny.className = 'card-tiny';
-
+      
       if (card.suit === 'joker') {
         const isBig = card.rank === 17;
         tiny.classList.add(isBig ? 'joker-big' : 'joker-small');
@@ -2838,9 +3189,9 @@ class Renderer {
       }
       row.appendChild(tiny);
     }
-
+    
     this.el.playHistory.appendChild(row);
-
+    
     // 滚动到最新（保持最右侧/最新可见）
     this.el.playHistory.scrollTop = this.el.playHistory.scrollHeight;
   }
@@ -2860,13 +3211,13 @@ class Renderer {
   highlightHint(cards) {
     // 清除所有选中
     this.selectedIndices.clear();
-
+    
     if (!cards || cards.length === 0) return;
-
+    
     // 在高亮前先清除所有选中
     const cardElements = this.el.handCards.querySelectorAll('.card');
     cardElements.forEach(el => el.classList.remove('selected', 'hint-highlight'));
-
+    
     // 找到这些牌对应的索引并选中
     for (const card of cards) {
       for (let i = 0; i < this.currentHand.length; i++) {
@@ -2906,7 +3257,7 @@ class Renderer {
         this.el.bgmVolume.style.display = isBGMPlaying() ? 'inline-block' : 'none';
       }
     });
-
+    
     // 音量滑块（仅当音乐播放时显示）
     if (this.el.bgmVolume) {
       this.el.bgmVolume.addEventListener('input', (e) => {
@@ -2914,7 +3265,7 @@ class Renderer {
         setBGMVolume(vol);
       });
     }
-
+    
     // 重新开始
     this.el.restartBtn.addEventListener('click', () => {
       location.reload();
@@ -2930,7 +3281,7 @@ class Renderer {
     } else {
       this.selectedIndices.add(index);
     }
-
+    
     const cardElements = this.el.handCards.querySelectorAll('.card');
     cardElements.forEach((el, i) => {
       el.classList.remove('hover');
@@ -3002,7 +3353,7 @@ class Renderer {
       confetti.style.width = (5 + Math.random() * 10) + 'px';
       confetti.style.height = (5 + Math.random() * 10) + 'px';
       document.body.appendChild(confetti);
-
+      
       // 自动移除
       setTimeout(() => confetti.remove(), 5000);
     }
@@ -3157,75 +3508,76 @@ function getBGMVolume() {
 
 // ==================== 斗地主 - 语音系统（方言/年龄/性格版） ====================
 // 混合模式：优先使用 edge-tts 服务器（Microsoft Neural 语音，含方言声源），不可用时降级 Web Speech API
-// v4: 每个角色独立方言+性格台词库（东北/陕西/普通话），语气多样
+// v5: CosyVoice3 方言角色（东北大叔/四川大妈/粤语女生）+ IndexTTS-2.5 情绪微调
+// 台词文本与 tts_models/lines_table.py 一致（manifest key 匹配预生成音频）
 
 // 角色配置：年龄 + 方言 + 性格 + 台词库
 const ROLE_CONFIG = {
-  '小呆': {
-    voice: 'dongbei',        // 东北方言声源（zh-CN-liaoning-XiaobeiNeural）
-    tag: '东北小姑娘',
+  '老胡': {  // 🧔 东北大叔：粗犷豪爽，东北腔（CosyVoice3 基准 + IndexTTS-2.5 情绪）
+    voice: 'dongbei',
+    tag: '东北大叔',
     lines: {
-      single: ['一张！', '单张！', '走你！', '哎呀妈呀，小牌！', '贼拉带劲！', '甩一张！', '这单张你接得住不？', '先来个开胃菜！', '嘿嘿，看这手气！', '走一张，巴适！'],
-      pair: ['对子！', '一对！', '俩！', '成双成对的！', '嘎嘎板正！', '小对子走你！'],
-      triple: ['三条！', '仨！', '三张一样的！', '东北仨！'],
-      tripleOne: ['三带一！', '带张小的！', '三拖一！', '仨带个跟班的！'],
-      tripleTwo: ['三带二！', '带一对！', '三拖俩！'],
-      straight: ['顺子！', '一条龙！', '老顺子了！', '连上了！', '这顺子溜得很！', '嘎嘎顺！'],
-      doubleStraight: ['连对！', '双龙！', '连对子！', '成双成对走起！'],
-      plane: ['飞机！', '灰机！', '飞机起飞咯！', '呜嗷飞过去！'],
-      planeSingle: ['飞机带单！', '灰机带翅膀！', '飞机挂小单！'],
-      planePair: ['飞机带对！', '灰机带双！', '飞机挂对！'],
-      bomb: ['炸弹！', '炸了！', '轰隆！', '看我东北大炮！', '炸你没商量！', '哎呦我去，炸！', '这一下够劲儿！', '冇问题，我炸你！', '巴适得很，炸咯！'],
-      rocket: ['王炸！', '大小王！', '王炸，这局稳了！', '妥妥的！', '王炸！冇得商量！'],
-      pass: ['过！', '要不起！', '不要！', '你厉害，服了！', '这可咋整！', '你先出！', '好牌都在你那！', '俺先歇会儿！', '莫得办法！', '过，唔该！'],
-      bid: ['叫地主！', '我来！', '这牌必须叫！', '老铁们，看我的！', '地主俺当定了！', '抢地主！'],
-      noBid: ['不叫', '过', '你们玩', '这牌不大行', '让给你们！', '俺先不掺和'],
-      win: ['赢了！', '哎呀真带劲！', '东北人打牌就是利索！', '承让承让！', '这不就赢了吗！', '带劲儿！', '手气杠杠的！', '赢咯赢咯，巴适！'],
-      lose: ['输了！', '下把翻盘！', '运气背啊！', '不服再来！', '哎呀，大意了！', '这局算你狠！', '唔系挂，输咗！']
+      single: ['来一张！', '整个小的！', '这单张，瞅你咋整！'],
+      pair: ['对儿，走你！', '成双成对！'],
+      triple: ['三条！', '仨！'],
+      tripleOne: ['三带一！', '仨带个小的！'],
+      tripleTwo: ['三带二！', '仨带俩！'],
+      straight: ['老顺子，溜溜的！', '顺子走起！'],
+      doubleStraight: ['连对！', '成双成对连上！'],
+      plane: ['飞机起飞！', '轰隆隆飞过去！'],
+      planeSingle: ['飞机带个翅膀！'],
+      planePair: ['飞机带双！'],
+      bomb: ['轰他娘的！', '看我东北大炮！', '炸你没商量！'],
+      rocket: ['王炸！这局稳赢！', '王炸压死！'],
+      pass: ['要不起，服了！', '整不起！', '过！'],
+      bid: ['俺抢地主！', '这牌俺要定了！'],
+      noBid: ['这牌不中', '俺先不抢'],
+      win: ['赢麻了，哈哈哈！', '东北爷们打牌就是利索！'],
+      lose: ['哎呀妈呀，又输咧！', '下把指定翻盘！']
     }
   },
-  '老胡': {
-    voice: 'shaanxi',        // 陕西方言声源（zh-CN-shaanxi-XiaoniNeural）
-    tag: '陕西大叔',
+  '小呆': {  // 👩 四川大妈：泼辣爽利，四川话
+    voice: 'sichuan',
+    tag: '四川大妈',
     lines: {
-      single: ['一张！', '单张！', '走！', '额滴神，小牌！', '美滴很！', '先丢一张！', '这单张你能管住？', '走一张，巴适！'],
-      pair: ['对子！', '一对！', '俩！', '成对咧！', '对子走！'],
-      triple: ['三条！', '仨！', '三张！', '三个一样滴！'],
-      tripleOne: ['三带一！', '带一张！', '仨带一！'],
-      tripleTwo: ['三带二！', '带一对！', '仨带俩！'],
-      straight: ['顺子！', '一条龙！', '连上咧！', '这顺子美滴很！'],
-      doubleStraight: ['连对！', '双龙！', '连对子！', '对子连上咧！'],
-      plane: ['飞机！', '飞咯！', '飞机过去！', '呜地飞走！'],
-      planeSingle: ['飞机带单！', '飞带一！', '飞机挂单！'],
-      planePair: ['飞机带对！', '飞带二！', '飞机挂对！'],
-      bomb: ['炸弹！', '炸咧！', '轰！', '看额滴炸！', '么麻达，炸了！', '这一炸够劲！', '安逸惨了，炸！'],
-      rocket: ['王炸！', '大小王！', '王炸，额赢定咧！', '么麻达！'],
-      pass: ['过！', '要不起！', '额先过！', '你出你出！', '么办法！', '让着你！', '好牌都在你手里！', '哎呀妈呀，要不起！'],
-      bid: ['叫地主！', '额来！', '这牌中！', '额当定了！', '抢地主！'],
-      noBid: ['不叫', '过', '你们玩', '这手牌不行', '让给你们！'],
-      win: ['赢咧！', '额滴牌就是好！', '美滴很！', '承让承让！', '又赢一局！', '么麻达！', '赢咯，安逸！'],
-      lose: ['输咧！', '么关系，再来！', '额滴运气不好！', '下把翻盘！', '这局算你赢！']
+      single: ['出张小的噻！', '来一张，巴适！', '这单张你接得住不？'],
+      pair: ['对子来咯！', '整一对！'],
+      triple: ['三条！', '搞三个！'],
+      tripleOne: ['三带一！', '三个带一个！'],
+      tripleTwo: ['三带二！', '三个带两个！'],
+      straight: ['顺子，溜得很！', '连起走！'],
+      doubleStraight: ['连对！', '对子连起！'],
+      plane: ['飞机起飞咯！', '飞过去！'],
+      planeSingle: ['飞机带一个！'],
+      planePair: ['飞机带两个！'],
+      bomb: ['炸死你娃儿！', '炸弹来咯！', '巴适，炸！'],
+      rocket: ['王炸！巴适得板！', '王炸，要得！'],
+      pass: ['要不起噻！', '莫得办法！', '过！'],
+      bid: ['老子要抢地主！', '这牌老子要！'],
+      noBid: ['这牌不得行', '先稳一哈'],
+      win: ['巴适！这把赢得安逸！', '安逸惨咯！'],
+      lose: ['搞啥子嘛，又输咯！', '下把再来！']
     }
   },
-  '你': {
-    voice: 'xiaoxiao',       // 普通话亲切女声（zh-CN-XiaoxiaoNeural）
-    tag: '普通话',
+  '你': {  // 👧 粤语女生：清脆活泼，广东粤语
+    voice: 'yue',
+    tag: '粤语女生',
     lines: {
-      play: ['走你！', '出牌！', '看我的！', '接招吧！', '嘿嘿！', '这牌看我收拾你们！', '上！', '轮到我表演了！', '小意思！', '这把我志在必得！'],
-      pass: ['过！', '不要！', '要不起！', '你先出！', '让你们得瑟一下！', '先让你一马！'],
-      bid: ['叫地主！', '我来！', '这把我来！', '当定了！', '这牌我得拿下！'],
-      noBid: ['不叫', '你们玩', '这牌不行', '先稳一稳'],
-      win: ['赢了！哈哈！', '承让承让！', '太简单了！', '又赢了！', '手气真好！'],
-      lose: ['哎呀，输了！', '下次再来！', '运气不好！', '再来一局！', '这局让给你们！']
+      play: ['出张细牌！', '嚟一张！', '看我嘅！'],
+      pass: ['唔该，过！', '要唔起！'],
+      bid: ['我抢地主！', '呢把我要！'],
+      noBid: ['呢手牌唔得', '先睇下先'],
+      win: ['哈哈，赢咗啦！', '呢把实赢！'],
+      lose: ['唉，又输咗咯！', '唔紧要，再嚟！']
     }
   }
 };
 
-// 兼容旧接口：角色 -> 声源 key
+// 兼容旧接口：角色 -> 声源 key（edge-tts / Web Speech 降级用）
 const ROLE_TTS_VOICES = {
-  '小呆': 'dongbei',
-  '老胡': 'shaanxi',
-  '你': 'xiaoxiao'
+  '小呆': 'sichuan',   // 四川大妈
+  '老胡': 'dongbei',   // 东北大叔
+  '你': 'yue'          // 粤语女生
 };
 
 // 兼容旧引用（内部不再直接用，保留以免其他文件报错）
@@ -3263,17 +3615,44 @@ function loadCosyManifest() {
  * @param {string} text - 台词文本
  * @returns {boolean} 是否命中预生成音频
  */
-function speakViaCosy(roleName, text) {
+// 预生成 wav 的 blob 缓存（url -> objectURL），绕过服务器 application/octet-stream 导致的播放失败
+const wavBlobCache = {};
+
+/**
+ * 用 fetch+blob 播放预生成 wav（强制 audio/wav，绕过服务器错误的 Content-Type）
+ * 服务器对 .wav 返回 application/octet-stream，直接 new Audio(url) 流式播放会 NotSupportedError；
+ * fetch 成 blob 并指定 audio/wav 后用 objectURL 播放即可正常。
+ * @param {string} url - wav 完整路径
+ * @param {Function} [onFail] - fetch/播放失败时的降级回调（如 Web Speech）
+ */
+function playWavAsBlob(url, onFail) {
+  if (wavBlobCache[url]) { enqueueAudio(wavBlobCache[url]); return; }
+  fetch(url)
+    .then(r => { if (!r.ok) throw new Error('http ' + r.status); return r.blob(); })
+    .then(blob => {
+      const typed = new Blob([blob], { type: 'audio/wav' });
+      const objUrl = URL.createObjectURL(typed);
+      wavBlobCache[url] = objUrl;
+      enqueueAudio(objUrl);
+    })
+    .catch(() => { if (onFail) onFail(); });
+}
+
+function speakViaCosy(roleName, text, voiceKey) {
   if (!cosyEnabled) return false;
-  const cosyKey = COSY_VOICE_MAP[roleName] + '_' + text;
-  // 1. IndexTTS-2（方言克隆，最自然）
+  // 优先用 voiceKey（laohu/xiaodai/human，新角色按 voice 映射），否则按角色名查 COSY_VOICE_MAP
+  const voicePrefix = voiceKey || COSY_VOICE_MAP[roleName];
+  if (!voicePrefix) return false;
+  const cosyKey = voicePrefix + '_' + text;
+  const fallback = () => speakViaWebSpeech(text, 1.0, 1.0);
+  // 1. IndexTTS-2.5（方言克隆+情绪，最自然）
   if (itManifest && itManifest[cosyKey]) {
-    enqueueAudio(itManifest[cosyKey]);
+    playWavAsBlob('/tts_cosy_it/' + itManifest[cosyKey], fallback);  // manifest 值是文件名，需加 /tts_cosy_it/ 前缀
     return true;
   }
   // 2. CosyVoice2（彩蛋方言：粤语/四川）
   if (cosyManifest && cosyManifest[cosyKey]) {
-    enqueueAudio(cosyManifest[cosyKey]);
+    playWavAsBlob('/tts_cosy/' + cosyManifest[cosyKey], fallback);   // 加 /tts_cosy/ 前缀
     return true;
   }
   return false;
@@ -3346,13 +3725,13 @@ function prewarmTTS() {
  */
 function speakViaTTS(text, voiceKey) {
   if (!ttsServerAvailable) return;
-
+  
   const cacheKey = voiceKey + '_' + text;
   if (audioCache[cacheKey]) {
     enqueueAudio(audioCache[cacheKey]);
     return;
   }
-
+  
   const url = TTS_SERVER + '/tts?text=' + encodeURIComponent(text) + '&voice=' + encodeURIComponent(voiceKey);
   fetch(url, { mode: 'cors' })
     .then(r => r.blob())
@@ -3421,13 +3800,13 @@ function speakViaWebSpeech(text, rate, pitch) {
 function initSpeech() {
   // 加载 CosyVoice2 预生成方言音频清单
   loadCosyManifest();
-
+  
   checkTTSServer().then(() => {
     if (ttsServerAvailable) {
       prewarmTTS(); // 服务器可用则预热
     }
   });
-
+  
   if (!window.speechSynthesis) return false;
   speechSynth = window.speechSynthesis;
   const loadVoices = () => {
@@ -3474,9 +3853,9 @@ function getVoiceStatus() {
  * @param {string} voiceKey - edge-tts 声源 key
  * @param {string} roleName - 角色名（小呆/老胡/你），用于 CosyVoice 方言音频
  */
-function speak(text, rate = 1.0, pitch = 1.0, voiceKey = 'xiaoxiao', roleName = null) {
-  // 优先使用 CosyVoice2 预生成的方言音频（最有人情味）
-  if (roleName && speakViaCosy(roleName, text)) return;
+function speak(text, rate = 1.0, pitch = 1.0, voiceKey = 'xiaoxiao', roleName = null, cosyVoice = null) {
+  // 优先使用预生成的方言音频（最有人情味）；cosyVoice 是新角色的语音映射（laohu/xiaodai/human）
+  if ((roleName || cosyVoice) && speakViaCosy(roleName, text, cosyVoice)) return;
   if (ttsServerAvailable) {
     speakViaTTS(text, voiceKey);
   } else {
@@ -3489,14 +3868,18 @@ function _randomLine(lines) {
 }
 
 /** 取角色台词库 */
-function _roleLines(playerName) {
+function _roleLines(playerName, cosyVoice) {
   const role = ROLE_CONFIG[playerName];
-  return role ? role : ROLE_CONFIG['你'];
+  if (role) return role;
+  // 新角色（随机对手）：按 voice 映射到现有语音库（台词库复用）
+  if (cosyVoice === 'laohu') return ROLE_CONFIG['老胡'];
+  if (cosyVoice === 'xiaodai') return ROLE_CONFIG['小呆'];
+  return ROLE_CONFIG['你'];
 }
 
 /** AI 出牌说话（按角色方言/性格） */
-function speakPlay(playerName, cardType, cards) {
-  const role = _roleLines(playerName);
+function speakPlay(playerName, cardType, cards, cosyVoice) {
+  const role = _roleLines(playerName, cosyVoice);
   const lines = role.lines;
   let line = '';
   switch (cardType) {
@@ -3518,31 +3901,31 @@ function speakPlay(playerName, cardType, cards) {
     case CARD_TYPE.ROCKET: line = _randomLine(lines.rocket); break;
     default: line = '出牌！';
   }
-  speak(line, 1.0, 1.0, role.voice, playerName);
+  speak(line, 1.0, 1.0, role.voice, playerName, cosyVoice);
 }
 
 /** AI 过牌说话（按角色） */
-function speakPass(playerName) {
-  const role = _roleLines(playerName);
-  speak(_randomLine(role.lines.pass), 1.0, 1.0, role.voice, playerName);
+function speakPass(playerName, cosyVoice) {
+  const role = _roleLines(playerName, cosyVoice);
+  speak(_randomLine(role.lines.pass), 1.0, 1.0, role.voice, playerName, cosyVoice);
 }
 
 /** AI 叫牌说话（按角色） */
-function speakBid(playerName, score) {
-  const role = _roleLines(playerName);
-  speak(score > 0 ? _randomLine(role.lines.bid) : _randomLine(role.lines.noBid), 1.0, 1.0, role.voice, playerName);
+function speakBid(playerName, score, cosyVoice) {
+  const role = _roleLines(playerName, cosyVoice);
+  speak(score > 0 ? _randomLine(role.lines.bid) : _randomLine(role.lines.noBid), 1.0, 1.0, role.voice, playerName, cosyVoice);
 }
 
 /** AI 赢牌说话（按角色） */
-function speakWin(playerName) {
-  const role = _roleLines(playerName);
-  speak(_randomLine(role.lines.win), 1.0, 1.0, role.voice, playerName);
+function speakWin(playerName, cosyVoice) {
+  const role = _roleLines(playerName, cosyVoice);
+  speak(_randomLine(role.lines.win), 1.0, 1.0, role.voice, playerName, cosyVoice);
 }
 
 /** AI 输牌说话（按角色） */
-function speakLose(playerName) {
-  const role = _roleLines(playerName);
-  speak(_randomLine(role.lines.lose), 1.0, 1.0, role.voice, playerName);
+function speakLose(playerName, cosyVoice) {
+  const role = _roleLines(playerName, cosyVoice);
+  speak(_randomLine(role.lines.lose), 1.0, 1.0, role.voice, playerName, cosyVoice);
 }
 
 /* ============ 人类玩家语音（普通话） ============ */
@@ -3668,10 +4051,10 @@ function autoPlaySmallest() {
 function initGame() {
   game = new Game();
   renderer = new Renderer();
-
+  
   // 初始化语音
   initSpeech();
-
+  
   // 监听父页面手势消息（用户点击🃏打开弹窗 = 用户手势）
   // 用于解除 iframe 音频自动播放限制，实现背景音乐默认打开
   window.addEventListener('message', (e) => {
@@ -3679,11 +4062,11 @@ function initGame() {
       tryStartBGM();
     }
   });
-
+  
   // 设置回调
   game.onStateChange = (state) => {
     renderer.renderState(state);
-
+    
     // 自动触发AI回合
     if (!isProcessing) {
       if (state.phase === 'bidding' && state.currentPlayer !== 0) {
@@ -3696,54 +4079,54 @@ function initGame() {
       }
     }
   };
-
+  
   game.onBidEnd = (landlordIndex) => {
     // 地主确定后说话
     setTimeout(() => {
       if (landlordIndex === 0) {
         speakHumanBid(3);
       } else {
-        speakBid(game.players[landlordIndex].name, 3);
+        speakBid(game.players[landlordIndex].name, 3, game.players[landlordIndex].voice);
       }
     }, 500);
   };
-
+  
   game.onGameEnd = (winnerIndex) => {
     // 语音播报（区分人类/AI）
     setTimeout(() => {
       const winner = game.players[winnerIndex];
       if (winnerIndex === 0) speakHumanWin();
-      else speakWin(winner.name);
-
+      else speakWin(winner.name, winner.voice);
+      
       // 输家说话
       for (let i = 0; i < 3; i++) {
         if (i !== winnerIndex) {
           setTimeout(() => {
             if (i === 0) speakHumanLose();
-            else speakLose(game.players[i].name);
+            else speakLose(game.players[i].name, game.players[i].voice);
           }, 1800);
         }
       }
     }, 500);
   };
-
+  
   // 设置渲染器回调
   renderer.onPlay = (cards) => {
     handleHumanPlay(cards);
   };
-
+  
   renderer.onPass = () => {
     handleHumanPass();
   };
-
+  
   renderer.onBid = (score) => {
     handleHumanBid(score);
   };
-
+  
   renderer.onHint = () => {
     handleHumanHint();
   };
-
+  
   // 开始游戏
   game.startGame();
 }
@@ -3755,14 +4138,14 @@ function handleHumanPlay(cards) {
   if (isProcessing) return;
   if (game.phase !== 'playing') return;
   if (game.currentPlayer !== 0) return;
-
+  
   // 验证牌型
   const type = detectType(cards);
   if (!type) {
     renderer.showMessage('❌ 无效的牌型！');
     return;
   }
-
+  
   // 检查是否能管上
   if (game.lastPlay && game.lastPlayer !== 0) {
     const lastPlayInfo = {
@@ -3776,32 +4159,32 @@ function handleHumanPlay(cards) {
       return;
     }
   }
-
+  
   isProcessing = true;
-
+  
   // 先说话（TTS 预热后即时播放），再出牌动画，保证同步
   const playType = detectType(cards);
   speakHumanPlay();
-
+  
   // 出牌动画
   renderer.animatePlayCards(0, cards);
-
+  
   const success = game.handlePlay(0, cards);
   if (!success) {
     renderer.showMessage('❌ 出牌失败！');
     isProcessing = false;
     return;
   }
-
+  
   renderer.clearHighlight();
   clearHumanTurnTimer(); // 人类已操作，清除倒计时
-
+  
   // 检查游戏是否结束
   if (game.phase === 'ended') {
     isProcessing = false;
     return;
   }
-
+  
   // AI 回合
   setTimeout(() => {
     isProcessing = false;
@@ -3817,27 +4200,27 @@ function handleHumanPass() {
   if (game.phase !== 'playing') return;
   if (game.currentPlayer !== 0) return;
   if (game.lastPlayer === 0 || game.lastPlayer === -1) return;
-
+  
   isProcessing = true;
-
+  
   // 人类玩家过牌说话
   speakHumanPass();
-
+  
   const success = game.handlePlay(0, []);
   if (!success) {
     isProcessing = false;
     return;
   }
-
+  
   renderer.clearHighlight();
   clearHumanTurnTimer(); // 人类已操作，清除倒计时
   renderer.showMessage('不出');
-
+  
   if (game.phase === 'ended') {
     isProcessing = false;
     return;
   }
-
+  
   setTimeout(() => {
     isProcessing = false;
     processAITurn();
@@ -3851,27 +4234,27 @@ function handleHumanBid(score) {
   if (isProcessing) return;
   if (game.phase !== 'bidding') return;
   if (game.currentPlayer !== 0) return;
-
+  
   isProcessing = true;
-
+  
   // 人类玩家叫牌说话
   speakHumanBid(score);
-
+  
   const success = game.handleBid(0, score);
   if (!success) {
     isProcessing = false;
     return;
   }
-
+  
   clearHumanTurnTimer(); // 人类已操作，清除倒计时
   renderer.hideBiddingUI();
-
+  
   if (score > 0) {
     renderer.showMessage(`你叫了 ${score} 分`);
   } else {
     renderer.showMessage('你不叫');
   }
-
+  
   // 检查游戏是否进入出牌阶段
   if (game.phase === 'playing') {
     // 地主确定，开始出牌
@@ -3888,7 +4271,7 @@ function handleHumanBid(score) {
     }
     return;
   }
-
+  
   // 继续叫地主（AI回合）
   setTimeout(() => {
     isProcessing = false;
@@ -3902,14 +4285,14 @@ function handleHumanBid(score) {
 function handleHumanHint() {
   if (game.phase !== 'playing') return;
   if (game.currentPlayer !== 0) return;
-
+  
   const validPlays = game.getValidPlays();
-
+  
   if (validPlays.length === 0) {
     renderer.showMessage('没有能出的牌');
     return;
   }
-
+  
   // 不选中任何牌，直接提示到下一组
   if (hintPlays.length === 0) {
     hintPlays = validPlays;
@@ -3917,10 +4300,10 @@ function handleHumanHint() {
   } else {
     hintIndex = (hintIndex + 1) % hintPlays.length;
   }
-
+  
   const hintCards = hintPlays[hintIndex];
   renderer.highlightHint(hintCards);
-
+  
   const type = detectType(hintCards);
   if (type) {
     renderer.showMessage(`提示: ${getTypeName(type.type)}`);
@@ -3934,43 +4317,43 @@ function processAIBidding() {
   if (isProcessing) return;
   if (game.phase !== 'bidding') return;
   if (game.currentPlayer === 0) return;
-
+  
   isProcessing = true;
-
+  
   const playerIndex = game.currentPlayer;
   const player = game.players[playerIndex];
   const hand = player.hand;
-
+  
   // 获取当前最高叫分
-  const currentBid = game.bidHistory.length > 0
+  const currentBid = game.bidHistory.length > 0 
     ? Math.max(...game.bidHistory.map(b => b.score))
     : 0;
-
-  const score = decideBid(hand, currentBid);
-
+  
+  const score = decideBid(hand, currentBid, player.personality);
+  
   const delay = getAIBidDelay();
-
+  
   setTimeout(() => {
     if (game.phase !== 'bidding') {
       isProcessing = false;
       return;
     }
-
+    
     const success = game.handleBid(playerIndex, score);
     if (!success) {
       isProcessing = false;
       return;
     }
-
+    
     // AI 说话
-    speakBid(player.name, score);
-
+    speakBid(player.name, score, player.voice);
+    
     if (score > 0) {
       renderer.showMessage(`${player.name} 叫了 ${score} 分`);
     } else {
       renderer.showMessage(`${player.name} 不叫`);
     }
-
+    
     if (game.phase === 'playing') {
       // 地主确定，开始出牌
       if (game.currentPlayer === 0) {
@@ -3985,7 +4368,7 @@ function processAIBidding() {
       }
       return;
     }
-
+    
     if (game.phase === 'bidding') {
       // 继续叫地主（可能是人类或AI）
       if (game.currentPlayer === 0) {
@@ -4008,46 +4391,46 @@ function processAITurn() {
   if (isProcessing) return;
   if (game.phase !== 'playing') return;
   if (game.currentPlayer === 0) return;
-
+  
   isProcessing = true;
-
+  
   const playerIndex = game.currentPlayer;
   const player = game.players[playerIndex];
   const hand = player.hand;
   const isLandlord = player.isLandlord;
-
+  
   const lastPlay = game.lastPlayer === playerIndex ? null : game.lastPlay;
   const lastPlayer = game.lastPlayer;
-
+  
   const delay = getAIDelay();
-
+  
   setTimeout(() => {
     if (game.phase !== 'playing') {
       isProcessing = false;
       return;
     }
-
-    const cards = choosePlay(hand, lastPlay, lastPlayer, isLandlord, playerIndex, game.landlord);
-
+    
+    const cards = choosePlay(hand, lastPlay, lastPlayer, isLandlord, playerIndex, game.landlord, player.personality);
+    
     const isPass = !cards || cards.length === 0;
-
+    
     if (isPass) {
       // 先说话再过牌
-      speakPass(player.name);
-
+      speakPass(player.name, player.voice);
+      
       const success = game.handlePlay(playerIndex, []);
       if (!success) {
         isProcessing = false;
         return;
       }
-
+      
       renderer.showMessage(`${player.name}: 过`);
-
+      
       if (game.phase === 'ended') {
         isProcessing = false;
         return;
       }
-
+      
       if (game.currentPlayer === 0) {
         resetHintState();
         startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
@@ -4061,23 +4444,23 @@ function processAITurn() {
     } else {
       // 先说话（TTS 即时播放）再出牌动画，保证同步
       const type = detectType(cards);
-      speakPlay(player.name, type ? type.type : '', cards);
-
+      speakPlay(player.name, type ? type.type : '', cards, player.voice);
+      
       renderer.animatePlayCards(playerIndex, cards);
-
+      
       const success = game.handlePlay(playerIndex, cards);
       if (!success) {
         isProcessing = false;
         return;
       }
-
+      
       renderer.showMessage(`${player.name} 出牌`);
-
+      
       if (game.phase === 'ended') {
         isProcessing = false;
         return;
       }
-
+      
       if (game.currentPlayer === 0) {
         resetHintState();
         startHumanTurnTimer(); // 轮到人类出牌，启动30秒倒计时
