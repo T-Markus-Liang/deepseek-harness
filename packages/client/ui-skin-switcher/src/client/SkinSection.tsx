@@ -131,37 +131,43 @@ export function SkinSection({ t }: SkinSectionProps): ReactElement {
         <p className={styles.empty}>{t('empty')}</p>
       ) : (
         <ul className={styles.list}>
-          <li className={styles.row}>
-            <button
-              type="button"
-              className={styles.choice}
-              data-active={active === null ? '' : undefined}
-              onClick={() => { choose(null) }}
-            >
+          <li className={styles.row} data-active={active === null ? '' : undefined}>
+            <div className={styles.info}>
               <span className={styles.name}>{t('none')}</span>
               <span className={styles.hint}>{t('noneHint')}</span>
+            </div>
+            <button
+              type="button"
+              className={styles.activate}
+              disabled={active === null}
+              onClick={() => { choose(null) }}
+            >
+              {active === null ? t('active') : t('activate')}
             </button>
           </li>
-          {skins.map(skin => (
-            <li key={skin.id} className={styles.row}>
-              <button
-                type="button"
-                className={styles.choice}
-                data-active={active === skin.id ? '' : undefined}
-                onClick={() => { choose(skin.id) }}
-              >
-                <span className={styles.name}>
-                  {skin.name}
-                  {skin.author !== undefined ? (
-                    <span className={styles.author}> · {skin.author}</span>
-                  ) : null}
-                </span>
-                <span className={styles.hint}>
-                  {active === skin.id ? t('active') : t('activate')}
-                </span>
-              </button>
-            </li>
-          ))}
+          {skins.map((skin) => {
+            const isActive = active === skin.id
+            return (
+              <li key={skin.id} className={styles.row} data-active={isActive ? '' : undefined}>
+                <div className={styles.info}>
+                  <span className={styles.name}>
+                    {skin.name}
+                    {skin.author !== undefined ? (
+                      <span className={styles.author}> · {skin.author}</span>
+                    ) : null}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.activate}
+                  disabled={isActive}
+                  onClick={() => { choose(skin.id) }}
+                >
+                  {isActive ? t('active') : t('activate')}
+                </button>
+              </li>
+            )
+          })}
         </ul>
       )}
     </section>

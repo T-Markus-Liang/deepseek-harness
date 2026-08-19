@@ -4,7 +4,7 @@
  */
 export const zh = {
   nav: '主题皮肤',
-  subtitle: '安装的主题皮肤会出现在这里，选择一个即可切换',
+  subtitle: '安装的主题皮肤会出现在这里，点击「启用」即可切换',
   none: '跟随默认外观',
   noneHint: '不启用任何主题皮肤，使用 DeepSeek Harness 默认外观',
   active: '使用中',
@@ -16,7 +16,7 @@ export const zh = {
 
 export const en = {
   nav: 'Theme skins',
-  subtitle: 'Installed theme skins appear here; select one to switch',
+  subtitle: 'Installed theme skins appear here; press Activate to switch',
   none: 'Default appearance',
   noneHint: 'Disable all theme skins and use the DeepSeek Harness default look',
   active: 'Active',
