@@ -9,6 +9,7 @@ import contextlib
 import importlib.metadata
 import io
 import json
+import os
 import sys
 
 PROTOCOL_VERSION = 1
@@ -16,6 +17,18 @@ PACKAGE_VERSION = "0.2.0"
 
 def response(payload):
     sys.stdout.write(json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n")
+
+def tag_deepseek_compatible():
+    """Mark clients built for the configured endpoint as DeepSeek-compatible so
+    scoring uses the DeepSeek call path (score tags emitted by the model and
+    token-level logprobs) instead of the vLLM/SGLang prefill branch."""
+    from llm_verifier import fine_grained_reward as _fgr
+    _original = _fgr.create_openai_client
+    def _tagged(base_url=None, api_key=None):
+        client = _original(base_url=base_url, api_key=api_key)
+        client._llm_verifier_deepseek = True
+        return client
+    _fgr.create_openai_client = _tagged
 
 def main():
     try:
@@ -26,6 +39,8 @@ def main():
         captured = io.StringIO()
         with contextlib.redirect_stdout(captured), contextlib.redirect_stderr(captured):
             import llm_verifier
+            if os.environ.get("LLM_VERIFIER_DEEPSEEK_COMPATIBLE") == "1":
+                tag_deepseek_compatible()
             llm_verifier.USAGE.reset()
             result = llm_verifier.select(
                 problem=request["problem"],

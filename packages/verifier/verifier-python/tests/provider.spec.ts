@@ -171,6 +171,62 @@ describe('Python verifier JSON bridge', () => {
     expect(() => process.kill(pid, 0)).toThrow()
   })
 
+  it('injects DeepSeek-compatible environment into the bridge when configured', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-verifier-deepseek-'))
+    roots.push(root)
+    const capture = join(root, 'capture.json')
+    const bridge = await fixture(`
+      import fs from 'node:fs';
+      const request = JSON.parse(fs.readFileSync(0, 'utf8'));
+      fs.writeFileSync(${JSON.stringify(capture)}, JSON.stringify({
+        compatible: process.env.LLM_VERIFIER_DEEPSEEK_COMPATIBLE,
+        maxTokens: process.env.DEEPSEEK_MAX_TOKENS,
+        effort: process.env.DEEPSEEK_EFFORT,
+        baseUrl: process.env.OPENAI_BASE_URL,
+        credential: process.env.OPENAI_API_KEY,
+        payloadModel: request.model,
+      }));
+      process.stdout.write(${JSON.stringify(successResult())});
+    `)
+    const ctx = await setup(
+      bridge,
+      { TEST_VERIFIER_KEY: 'explicit-secret' },
+      { credentialEnv: 'OPENAI_API_KEY', deepseekCompatible: true, maxTokens: 4096, effort: 'low', baseUrl: 'http://verifier.example/v1' },
+    )
+
+    await ctx.verifier.select(request())
+    const captured = JSON.parse(await readFile(capture, 'utf8')) as Record<string, unknown>
+    expect(captured).toEqual({
+      compatible: '1',
+      maxTokens: '4096',
+      effort: 'low',
+      baseUrl: 'http://verifier.example/v1',
+      credential: 'explicit-secret',
+      payloadModel: 'deepseek-chat',
+    })
+  })
+
+  it('omits DeepSeek-compatible environment by default', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'dsh-verifier-plain-'))
+    roots.push(root)
+    const capture = join(root, 'capture.json')
+    const bridge = await fixture(`
+      import fs from 'node:fs';
+      fs.readFileSync(0, 'utf8');
+      fs.writeFileSync(${JSON.stringify(capture)}, JSON.stringify({
+        compatible: process.env.LLM_VERIFIER_DEEPSEEK_COMPATIBLE,
+        maxTokens: process.env.DEEPSEEK_MAX_TOKENS,
+        effort: process.env.DEEPSEEK_EFFORT,
+      }));
+      process.stdout.write(${JSON.stringify(successResult())});
+    `)
+    const ctx = await setup(bridge, undefined, { baseUrl: 'http://verifier.example/v1' })
+
+    await ctx.verifier.select(request())
+    const captured = JSON.parse(await readFile(capture, 'utf8')) as Record<string, unknown>
+    expect(captured).toEqual({ compatible: undefined, maxTokens: undefined, effort: undefined })
+  })
+
   it('rejects missing credentials before spawning a multi-candidate bridge', async () => {
     const bridge = await fixture('throw new Error("must not run")')
     const ctx = await setup(bridge, {})
@@ -203,5 +259,10 @@ describe('Python verifier JSON bridge', () => {
     expect(PYTHON_BRIDGE).toContain('PACKAGE_VERSION = "0.2.0"')
     expect(LLM_VERIFIER_REQUIREMENT).toBe('llm-verifier==0.2.0')
     expect(credentialRef('TEST_VERIFIER_KEY')).toBe('TEST_VERIFIER_KEY')
+  })
+
+  it('embeds the DeepSeek-compatible tag in the production bridge', async () => {
+    expect(PYTHON_BRIDGE).toContain('LLM_VERIFIER_DEEPSEEK_COMPATIBLE')
+    expect(PYTHON_BRIDGE).toContain('_llm_verifier_deepseek')
   })
 })

@@ -52,6 +52,15 @@ export interface Config {
   credentialEnv?: string
   /** Optional OpenAI-compatible base URL passed to the verifier process. */
   baseUrl?: string
+  /**
+   * Whether the configured endpoint is DeepSeek-compatible: it emits the score tags itself and
+   * returns token-level logprobs, skipping the vLLM/SGLang prefill branch. Defaults to false.
+   */
+  deepseekCompatible?: boolean
+  /** Output token budget for a DeepSeek-compatible backend; sets `DEEPSEEK_MAX_TOKENS` in the bridge process. Defaults to 8192. */
+  maxTokens?: number
+  /** Reasoning effort for a DeepSeek-compatible backend; sets `DEEPSEEK_EFFORT`. Defaults to `off`. */
+  effort?: 'off' | 'low' | 'high' | 'max'
   /** Maximum candidates accepted by one selection. Defaults to 16. */
   maxCandidates?: number
   /** Maximum characters accepted in each serialized candidate trajectory. */
@@ -70,6 +79,9 @@ export const Config: z<Config> = z.object({
   credentialRef: z.string().default('DEEPSEEK_API_KEY'),
   credentialEnv: z.string().default('DEEPSEEK_API_KEY'),
   baseUrl: z.string(),
+  deepseekCompatible: z.boolean().default(false),
+  maxTokens: z.number().step(1).min(1).default(8192),
+  effort: z.union(['off', 'low', 'high', 'max']).default('off'),
   maxCandidates: z.number().step(1).min(1).max(128).default(16),
   maxCandidateChars: z.number().step(1).min(1).default(1_000_000),
   maxProblemChars: z.number().step(1).min(1).default(100_000),
@@ -83,6 +95,9 @@ interface ResolvedConfig {
   credentialRef: CredentialRef
   credentialEnv: string
   baseUrl?: string
+  deepseekCompatible: boolean
+  maxTokens: number
+  effort: 'off' | 'low' | 'high' | 'max'
   maxCandidates: number
   maxCandidateChars: number
   maxProblemChars: number
@@ -110,6 +125,9 @@ function resolveConfig(config: Config): ResolvedConfig {
     credentialRef: credentialRef(config.credentialRef ?? 'DEEPSEEK_API_KEY'),
     credentialEnv,
     ...(config.baseUrl === undefined ? {} : { baseUrl: config.baseUrl }),
+    deepseekCompatible: config.deepseekCompatible === true,
+    maxTokens: positiveInteger(config.maxTokens ?? 8192, 'maxTokens'),
+    effort: config.effort ?? 'off',
     maxCandidates: positiveInteger(config.maxCandidates ?? 16, 'maxCandidates'),
     maxCandidateChars: positiveInteger(config.maxCandidateChars ?? 1_000_000, 'maxCandidateChars'),
     maxProblemChars: positiveInteger(config.maxProblemChars ?? 100_000, 'maxProblemChars'),
@@ -266,6 +284,13 @@ export class PythonVerifier extends Verifier {
             PYTHONDONTWRITEBYTECODE: '1',
             ...(credential === undefined ? {} : { [this.config.credentialEnv]: credential.value }),
             ...(this.config.baseUrl === undefined ? {} : { OPENAI_BASE_URL: this.config.baseUrl }),
+            ...(this.config.deepseekCompatible === true
+              ? {
+                LLM_VERIFIER_DEEPSEEK_COMPATIBLE: '1',
+                DEEPSEEK_MAX_TOKENS: String(this.config.maxTokens),
+                DEEPSEEK_EFFORT: this.config.effort,
+              }
+              : {}),
           },
         })
       } catch (error) {

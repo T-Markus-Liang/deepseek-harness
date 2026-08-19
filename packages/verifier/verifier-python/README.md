@@ -8,6 +8,8 @@ Each operation uses a private temporary cwd, so upstream `.env` discovery cannot
 
 Defaults are conservative: four concurrent verifier calls, `on_error="raise"`, no upstream score cache, and no progress output. Deployments install the exact requirement in the Python environment named by `pythonCommand`.
 
+For a DeepSeek-compatible relay endpoint (one that emits the score tags itself and returns token-level logprobs, for example a shim in front of a DeepSeek-semantics API), set `deepseekCompatible: true` so the provider forwards `DEEPSEEK_MAX_TOKENS` (default 8192) and `DEEPSEEK_EFFORT` (default `off`) and the bridge routes scoring through the DeepSeek call path. Point `credentialEnv` at `OPENAI_API_KEY`, which is the variable the upstream OpenAI-compatible client reads when an OpenAI base URL is configured.
+
 ## Model Experience
 
 ### Provider result
@@ -26,7 +28,7 @@ No direct invalidation in the conversation model. The independent verifier backe
 
 ## Known Limitations and Deferred Work
 
-- The pinned `llm-verifier` scoring consumes token-level top-20 logprobs from the verifier backend, so the backend (the DeepSeek official API, or any OpenAI-compatible server exposing logprobs) must return them. Aggregator and relay endpoints commonly reject the `logprobs` parameter or accept it without returning data; against such backends every selection degrades to the upstream neutral tie (equal candidate scores) and no usage is recorded. Validate the backend with a real `select()` before relying on rankings.
+- The pinned `llm-verifier` scoring consumes token-level top-20 logprobs from the verifier backend, so the backend (the DeepSeek official API, or any OpenAI-compatible server exposing logprobs) must return them. Aggregator and relay endpoints commonly reject the `logprobs` parameter or accept it without returning data; against such backends every selection degrades to the upstream neutral tie (equal candidate scores) and no usage is recorded. For a DeepSeek-compatible relay endpoint, configure `deepseekCompatible` before relying on rankings; validate any other backend with a real `select()`.
 - Python environment provisioning is deployment-owned; this package does not run `pip`.
 - One process is started per selection, so no warm client pool is retained.
 - The provider forwards one credential reference and optional OpenAI-compatible base URL per instance.
