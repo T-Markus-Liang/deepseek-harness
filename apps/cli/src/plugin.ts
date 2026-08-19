@@ -12,7 +12,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { delimiter, dirname, join, resolve } from 'node:path'
 import {
   DEFAULT_PROFILE_BUNDLES,
   initProfile,
@@ -43,6 +43,20 @@ function findPnpmFallback(): string | undefined {
     if (existsSync(candidate)) return candidate
   }
   return undefined
+}
+
+/**
+ * The environment for the pnpm child process. pnpm is a shell shim that runs
+ * `env node`, so the directory of the running node (`process.execPath`) must
+ * be on the child's PATH even when the invoking process inherited a minimal
+ * PATH without it (restricted-launch GUI environments).
+ * @returns `process.env` with the node directory prepended to PATH when absent.
+ */
+function pnpmEnv(): NodeJS.ProcessEnv {
+  const path = process.env.PATH ?? ''
+  const execDir = dirname(process.execPath)
+  if (path.split(delimiter).includes(execDir)) return process.env
+  return { ...process.env, PATH: path === '' ? execDir : `${execDir}${delimiter}${path}` }
 }
 
 /**
@@ -149,11 +163,12 @@ export function runPlugin(profile: string, args: readonly string[]): number {
     cwd: dir,
     stdio: 'inherit',
     shell: process.platform === 'win32',
+    env: pnpmEnv(),
   })
   if (result.error !== undefined && (result.error as NodeJS.ErrnoException).code === 'ENOENT' && process.platform !== 'win32') {
     const fallback = findPnpmFallback()
     if (fallback !== undefined) {
-      result = spawnSync(fallback, anchoredArgs, { cwd: dir, stdio: 'inherit' })
+      result = spawnSync(fallback, anchoredArgs, { cwd: dir, stdio: 'inherit', env: pnpmEnv() })
     }
   }
   if (result.error !== undefined) {
