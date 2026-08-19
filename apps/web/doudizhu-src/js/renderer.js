@@ -361,6 +361,8 @@ class Renderer {
     const roleText = player.role === 'landlord' ? '地主' : '农民';
     const avatar = player.avatar || (playerIndex === 0 ? '😎' : '🤖');
     const tag = player.tag ? `<span class="player-tag">${player.tag}</span>` : '';
+    const score = (typeof player.score === 'number') ? player.score : 1000;
+    const scoreClass = score < 0 ? 'score-negative' : '';
     
     info.innerHTML = `
       <div class="player-avatar" style="background-color: ${this._getAvatarColor(playerIndex)}">
@@ -370,6 +372,7 @@ class Renderer {
         <div class="player-name">${player.name} ${tag}</div>
         <div class="player-role">${roleIcon} ${roleText}</div>
         <div class="player-cards-count">剩余: ${player.handCount}张</div>
+        <div class="player-score ${scoreClass}">💰 ${score}</div>
       </div>
     `;
   }

@@ -261,6 +261,17 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.player-score {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffd700;
+  margin-top: 2px;
+}
+
+.player-score.score-negative {
+  color: #ff5252;
+}
+
 /* 中央游戏区 */
 .center-area {
   flex: 1;

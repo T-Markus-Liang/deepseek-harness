@@ -129,6 +129,14 @@ function initGame() {
   };
   
   game.onGameEnd = (winnerIndex) => {
+    // 积分结算消息（人类视角：本局变化 + 当前积分）
+    setTimeout(() => {
+      const delta = (game.scoreDelta && game.scoreDelta[0]) || 0;
+      const humanScore = game.players[0].score;
+      const deltaStr = delta > 0 ? `+${delta}` : String(delta);
+      renderer.showMessage(`本局${delta >= 0 ? '赢' : '输'} ${deltaStr} 分 · 当前积分: ${humanScore}`);
+    }, 300);
+    
     // 语音播报（区分人类/AI）
     setTimeout(() => {
       const winner = game.players[winnerIndex];

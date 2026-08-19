@@ -268,6 +268,17 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.player-score {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffd700;
+  margin-top: 2px;
+}
+
+.player-score.score-negative {
+  color: #ff5252;
+}
+
 /* 中央游戏区 */
 .center-area {
   flex: 1;
@@ -1887,10 +1898,12 @@ class Game {
   reset() {
     // 每局随机抽取 2 个 AI 对手（带头像/性格/语音映射）
     const [opp1, opp2] = drawOpponents();
+    // 积分从 localStorage 持久化读取（跨"再来一局"重载保留）；首次默认 1000，可扣为负值
+    const saved = this._loadScores();
     this.players = [
-      { name: '你', hand: [], isLandlord: false, role: 'farmer', avatar: '😎', personality: 'balanced', voice: 'human', charId: 'you' },
-      { name: opp1.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp1.avatar, personality: opp1.personality, voice: opp1.voice, charId: opp1.id, tag: opp1.tag },
-      { name: opp2.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp2.avatar, personality: opp2.personality, voice: opp2.voice, charId: opp2.id, tag: opp2.tag }
+      { name: '你', hand: [], isLandlord: false, role: 'farmer', avatar: '😎', personality: 'balanced', voice: 'human', charId: 'you', score: saved[0] },
+      { name: opp1.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp1.avatar, personality: opp1.personality, voice: opp1.voice, charId: opp1.id, tag: opp1.tag, score: saved[1] },
+      { name: opp2.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp2.avatar, personality: opp2.personality, voice: opp2.voice, charId: opp2.id, tag: opp2.tag, score: saved[2] }
     ];
     this.landlordCards = [];
     this.currentPlayer = 0;
@@ -1902,6 +1915,7 @@ class Game {
     this.bidCount = 0;          // 叫地主轮数
     this.landlord = -1;         // 地主索引
     this.winner = null;         // 赢家
+    this.scoreDelta = [0, 0, 0]; // 本局积分变化
     this.playHistory = [];      // 出牌历史
     this.selectedCards = [];    // 当前选中牌
     this.validPlays = [];       // 当前可出的牌
@@ -2069,6 +2083,7 @@ class Game {
     if (this.players[playerIndex].hand.length === 0) {
       this.phase = 'ended';
       this.winner = playerIndex;
+      this.settleScores(playerIndex);
       this._notifyState();
       if (this.onGameEnd) {
         this.onGameEnd(playerIndex);
@@ -2078,6 +2093,61 @@ class Game {
     
     this._nextPlayer();
     return true;
+  }
+
+  /**
+   * 从 localStorage 读取持久化积分（跨"再来一局"重载保留）；无记录则首次 1000
+   * @returns {Array<number>} 三个玩家的积分
+   */
+  _loadScores() {
+    try {
+      const raw = localStorage.getItem('doudizhu_scores');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length === 3) {
+          return arr.map(v => (typeof v === 'number' ? v : 1000));
+        }
+      }
+    } catch (e) { /* localStorage 不可用则默认 1000 */ }
+    return [1000, 1000, 1000];
+  }
+
+  /**
+   * 保存当前积分到 localStorage
+   */
+  _saveScores() {
+    try {
+      localStorage.setItem('doudizhu_scores', JSON.stringify(this.players.map(p => p.score)));
+    } catch (e) { /* 忽略持久化失败 */ }
+  }
+
+  /**
+   * 结算积分（经典斗地主规则，可扣为负值）
+   * 底分按叫分倍数：地主赢 +2×倍数，农民各 -1×倍数；地主输 -2×倍数，农民各 +1×倍数
+   * 记录每个玩家的本局积分变化到 scoreDelta（供 UI 显示）
+   * @param {number} winnerIndex - 赢家索引
+   */
+  settleScores(winnerIndex) {
+    if (this.landlord === -1) return;
+    // 叫分倍数：取本局最高叫分（1/2/3），无叫分则 1
+    let multiplier = 1;
+    if (this.bidHistory && this.bidHistory.length > 0) {
+      multiplier = Math.max(...this.bidHistory.map(b => b.score));
+      if (multiplier < 1) multiplier = 1;
+    }
+    const landlordWon = winnerIndex === this.landlord;
+    this.scoreDelta = [0, 0, 0];
+    for (let i = 0; i < 3; i++) {
+      let delta;
+      if (i === this.landlord) {
+        delta = landlordWon ? 2 * multiplier : -2 * multiplier;
+      } else {
+        delta = landlordWon ? -1 * multiplier : 1 * multiplier;
+      }
+      this.players[i].score += delta;
+      this.scoreDelta[i] = delta;
+    }
+    this._saveScores();
   }
 
   /**
@@ -2111,7 +2181,8 @@ class Game {
         personality: p.personality,
         voice: p.voice,
         tag: p.tag,
-        charId: p.charId
+        charId: p.charId,
+        score: p.score
       })),
       landlordCards: this.landlordCards,
       currentPlayer: this.currentPlayer,
@@ -2121,6 +2192,7 @@ class Game {
       bidHistory: this.bidHistory,
       landlord: this.landlord,
       winner: this.winner,
+      scoreDelta: this.scoreDelta,
       isCurrentPlayerHuman: this.currentPlayer === 0 && this.phase === 'playing'
     };
   }
@@ -2842,6 +2914,8 @@ class Renderer {
     const roleText = player.role === 'landlord' ? '地主' : '农民';
     const avatar = player.avatar || (playerIndex === 0 ? '😎' : '🤖');
     const tag = player.tag ? `<span class="player-tag">${player.tag}</span>` : '';
+    const score = (typeof player.score === 'number') ? player.score : 1000;
+    const scoreClass = score < 0 ? 'score-negative' : '';
     
     info.innerHTML = `
       <div class="player-avatar" style="background-color: ${this._getAvatarColor(playerIndex)}">
@@ -2851,6 +2925,7 @@ class Renderer {
         <div class="player-name">${player.name} ${tag}</div>
         <div class="player-role">${roleIcon} ${roleText}</div>
         <div class="player-cards-count">剩余: ${player.handCount}张</div>
+        <div class="player-score ${scoreClass}">💰 ${score}</div>
       </div>
     `;
   }
@@ -4126,6 +4201,14 @@ function initGame() {
   };
   
   game.onGameEnd = (winnerIndex) => {
+    // 积分结算消息（人类视角：本局变化 + 当前积分）
+    setTimeout(() => {
+      const delta = (game.scoreDelta && game.scoreDelta[0]) || 0;
+      const humanScore = game.players[0].score;
+      const deltaStr = delta > 0 ? `+${delta}` : String(delta);
+      renderer.showMessage(`本局${delta >= 0 ? '赢' : '输'} ${deltaStr} 分 · 当前积分: ${humanScore}`);
+    }, 300);
+    
     // 语音播报（区分人类/AI）
     setTimeout(() => {
       const winner = game.players[winnerIndex];
