@@ -7,7 +7,7 @@ const PACKAGE_NAME = '@deepseek-ai/dsh-verifier'
 export const name = 'verifier-invariant'
 export const inject = ['invariants']
 
-/** Selection results cross the provider call directly and retain no event lifecycle to inspect. */
+/** No runtime invariant: selection results cross the provider call directly and retain no event lifecycle to inspect. */
 const install: InvariantInstaller = () => {}
 
 /** Register this package's invariant ownership. */

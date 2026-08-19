@@ -1,0 +1,6 @@
+# Skin switcher bundle patch: inserts its browser entry into the web plugin
+# roster. The host half is a plain function plugin resolved by package name;
+# the browser half registers the Settings skin section.
+- insert:
+    - id: ui-skin-switcher
+      name: '@deepseek-ai/dsh-client-ui-skin-switcher'
