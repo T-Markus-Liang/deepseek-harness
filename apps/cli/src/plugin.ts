@@ -27,6 +27,24 @@ import { INSTALL_ANCHOR } from './profile-boot.ts'
 
 const NAME = 'dsh'
 
+/** Absolute pnpm locations tried when the PATH lookup fails. Restricted-launch
+ * environments (for example GUI processes with a minimal `PATH`) can run the
+ * `dsh` binary through an absolute path while still lacking `/usr/local/bin`
+ * or `/opt/homebrew/bin` on `PATH`. */
+const PNPM_FALLBACK_LOCATIONS = ['/usr/local/bin/pnpm', '/opt/homebrew/bin/pnpm']
+
+/**
+ * The first existing fallback pnpm executable, or undefined to resolve `pnpm`
+ * through PATH (the only option on Windows, where pnpm is a `.cmd` shim).
+ * @returns an absolute pnpm path when one of the fallback locations exists.
+ */
+function findPnpmFallback(): string | undefined {
+  for (const candidate of PNPM_FALLBACK_LOCATIONS) {
+    if (existsSync(candidate)) return candidate
+  }
+  return undefined
+}
+
 /**
  * Whether a resolved dependency exports a profile patch, i.e. is a bundle.
  * @param packageName - the dependency's package name.
@@ -124,13 +142,20 @@ export function runPlugin(profile: string, args: readonly string[]): number {
     process.stderr.write(`${NAME}: initialized profile ${profile} at ${dir}\n`)
   }
   const before = readProfileManifest(NAME, dir)
+  const anchoredArgs = args.map(argument => anchorPathSpec(argument, process.cwd()))
   // Windows resolves pnpm through its .cmd shim, which spawn() refuses
   // without a shell since the CVE-2024-27980 hardening.
-  const result = spawnSync('pnpm', args.map(argument => anchorPathSpec(argument, process.cwd())), {
+  let result = spawnSync('pnpm', anchoredArgs, {
     cwd: dir,
     stdio: 'inherit',
     shell: process.platform === 'win32',
   })
+  if (result.error !== undefined && (result.error as NodeJS.ErrnoException).code === 'ENOENT' && process.platform !== 'win32') {
+    const fallback = findPnpmFallback()
+    if (fallback !== undefined) {
+      result = spawnSync(fallback, anchoredArgs, { cwd: dir, stdio: 'inherit' })
+    }
+  }
   if (result.error !== undefined) {
     const code = (result.error as NodeJS.ErrnoException).code
     if (code === 'ENOENT') {
