@@ -12,12 +12,12 @@
 #   - CosyVoice2 模型: /Users/markus/humanoid-robot/tts_models/CosyVoice2-0.5B
 #   - CosyVoice 代码: /Users/markus/humanoid-robot/tts_models/CosyVoice
 #   - 游戏源码: /Users/markus/humanoid-robot/dou-dizhu
-#   - DSH public:  /Users/markus/humanoid-robot/deepseek-harness-src/apps/web/public
+#   - DSH public:  /Users/markus/deepseek-harness/apps/web/public
 # ============================================================
 
 ENV=/Users/markus/humanoid-robot/tts_models/cosy_env
-PUBLIC=/Users/markus/humanoid-robot/deepseek-harness-src/apps/web/public
-DIST=/Users/markus/humanoid-robot/deepseek-harness-src/apps/web/dist
+PUBLIC=/Users/markus/deepseek-harness/apps/web/public
+DIST=/Users/markus/deepseek-harness/apps/web/dist
 PRESEN="$PUBLIC/cosyvoice/pregen_cosyvoice.py"
 
 case "${1:-help}" in
