@@ -805,7 +805,13 @@ class Renderer {
     // 打开弹窗时的手势解锁（main.js 的 tryStartBGM）负责"默认打开"，
     // 但用户手动关闭(mute)后，此按钮是唯一能重新打开的入口
     this.el.bgmToggle.addEventListener('click', () => {
-      toggleBGM(); // 内部更新 bgmUserMuted 标志
+      // 若 isPlaying 但 AudioContext 实际 suspended（postMessage 自动播放被浏览器拒绝），
+      // 真实点击手势下先解锁恢复播放，而不是走 toggle 的关闭分支
+      if (isBGMPlaying() && getAudioCtxState() === 'suspended') {
+        retryBGMUnlock();
+      } else {
+        toggleBGM(); // 正常播放中 → 关闭；静音中 → 打开
+      }
       this.el.bgmToggle.textContent = isBGMPlaying() ? '🔊 音乐' : '🔇 音乐';
       if (this.el.bgmVolume) {
         this.el.bgmVolume.style.display = isBGMPlaying() ? 'inline-block' : 'none';

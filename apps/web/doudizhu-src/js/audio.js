@@ -123,6 +123,36 @@ function isBGMPlaying() {
 }
 
 /**
+ * 获取 AudioContext 状态（'running' | 'suspended' | 'closed' | null）
+ * @returns {string|null}
+ */
+function getAudioCtxState() {
+  return audioCtx ? audioCtx.state : null;
+}
+
+/**
+ * 在真实用户手势下重试解锁 AudioContext 并重启播放
+ * 用于 postMessage 触发的 resume 被浏览器自动播放策略拒绝（context 仍 suspended）的场景：
+ * 此时 isPlaying=true 但实际无声，用户点击喇叭时走到这里，真实手势 resume 会成功。
+ */
+function retryBGMUnlock() {
+  if (bgmUserMuted) return;
+  initAudio();
+  if (!audioCtx) return;
+  if (audioCtx.state !== 'suspended') return; // 已 running 无需处理
+
+  audioCtx.resume().then(() => {
+    if (audioCtx.state !== 'running') return;
+    // resume 成功：重建播放源重新 start（旧 source 可能因 suspended 时 start 而无输出）
+    try { bgmSource.stop(); } catch (e) {}
+    try { bgmSource.disconnect(); } catch (e) {}
+    bgmSource = null;
+    isPlaying = false;   // 允许 startBGM 重新走完整流程
+    startBGM();
+  }).catch(() => {});
+}
+
+/**
  * 是否处于用户静音状态
  */
 function isBGMUserMuted() {

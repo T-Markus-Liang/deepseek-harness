@@ -100,14 +100,21 @@ function initGame() {
     }
   });
   
-  // 兜底：iframe 内任何用户交互都尝试启动 BGM（postMessage 可能因时序/缓存丢失）
-  // 用户已手动静音（bgmUserMuted=true）时 tryStartBGM 内部会拒绝，不会打扰
-  const tryStartBGMOnce = () => {
+  // 兜底：iframe 内任何用户交互都尝试启动/恢复 BGM（postMessage 可能因时序/缓存丢失，
+  // 或跨 iframe activation 被浏览器拒绝）。非 once：每次交互都重试，直到 AudioContext
+  // 真正 running（浏览器自动播放策略下，真实手势的 resume 才会成功）。
+  // 用户已手动静音（bgmUserMuted=true）时 tryStartBGM 内部会拒绝，不会打扰。
+  const tryStartBGMAny = () => {
     try { tryStartBGM(); } catch (e) {}
   };
-  window.addEventListener('pointerdown', tryStartBGMOnce, { once: true });
-  window.addEventListener('touchstart', tryStartBGMOnce, { once: true });
-  window.addEventListener('click', tryStartBGMOnce, { once: true });
+  window.addEventListener('pointerdown', tryStartBGMAny);
+  window.addEventListener('touchstart', tryStartBGMAny);
+  window.addEventListener('click', tryStartBGMAny);
+  
+  // 加载后立即尝试自动播放（不依赖 postMessage；allow=autoplay 已由插件设置）
+  setTimeout(() => {
+    try { tryStartBGM(); } catch (e) {}
+  }, 300);
   
   // 设置回调
   game.onStateChange = (state) => {
@@ -570,18 +577,26 @@ function resetHintState() {
 }
 
 /**
- * 尝试启动背景音乐（打开弹窗时自动调用）
+ * 尝试启动背景音乐（打开弹窗/用户交互时调用）
  * 用户已手动静音（bgmUserMuted=true）时不得再播放
+ * 关键：若 isPlaying=true 但 AudioContext 实际是 suspended（postMessage 触发的 resume 被
+ * 浏览器自动播放策略拒绝），必须在真实用户手势下重试 resume + 重启播放，否则无声。
  */
 function tryStartBGM() {
   if (isBGMUserMuted()) return; // 用户已静音，禁止自动播放
   if (!isBGMPlaying()) {
     startBGM();
-    if (renderer) {
-      renderer.el.bgmToggle.textContent = '🔊 音乐';
-      if (renderer.el.bgmVolume) {
-        renderer.el.bgmVolume.style.display = 'inline-block';
-      }
+  } else {
+    // 已在播放状态：确认 AudioContext 真的 running，否则重试解锁（真实手势下 resume 会成功）
+    const ctxState = getAudioCtxState();
+    if (ctxState === 'suspended') {
+      retryBGMUnlock();
+    }
+  }
+  if (renderer) {
+    renderer.el.bgmToggle.textContent = '🔊 音乐';
+    if (renderer.el.bgmVolume) {
+      renderer.el.bgmVolume.style.display = 'inline-block';
     }
   }
 }
