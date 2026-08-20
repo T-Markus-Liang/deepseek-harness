@@ -273,6 +273,16 @@ removeArchivedSession(sessionId: SessionId): Promise<void>
 unaccountSession(sessionId: SessionId): Promise<void>
 
 /**
+ * Relocate a session to a different workspace: rewrite the persisted
+ * header `cwd` to the target workspace's path, update the in-memory
+ * path mapping, detach from every workspace, and attach to the target.
+ * The session must not be live — the caller guarantees it.
+ * @param sessionId - The session to move.
+ * @param targetWorkspaceId - The workspace to move the session into.
+ */
+moveSession(sessionId: SessionId, targetWorkspaceId: WorkspaceId): Promise<void>
+
+/**
  * Resolve by canonical directory path without creating or mutating a
  * workspace. A missing path rejects during `realpath`; an existing unowned
  * directory returns `undefined`.
@@ -284,5 +294,5 @@ async resolveByPath(path: string): Promise<Workspace | undefined>
 
 Types: [SessionId](core.md)
 
-Source: [`packages/workspace/workspace/src/index.ts:92`](../../packages/workspace/workspace/src/index.ts)
+Source: [`packages/workspace/workspace/src/index.ts:93`](../../packages/workspace/workspace/src/index.ts)
 <!-- END GENERATED cordis-surface -->

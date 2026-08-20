@@ -8,6 +8,9 @@ English | [中文](index.zh.md)
 
 ## Completed
 
+- [2026-08-20 16:10 - Allow Web model selection when a session contains images](completed/2026-08-20_1610_fix-image-model-selection.md)
+- [2026-08-20 13:45 - Finish rc.8-compatible session lifecycle](completed/2026-08-20_1345-finish-session-lifecycle-rc8.md)
+- [2026-08-20 13:15 - Fix stale llm-openai frontend loader](completed/2026-08-20_1315-fix-stale-llm-openai-loader.md)
 - [2026-08-20 13:00 - Restore local session lifecycle](completed/2026-08-20_1300_restore-session-lifecycle.md)
 
 - [2026-08-20 12:40 - Remove FCC-derived LLM module](completed/2026-08-20_1240_remove-fcc-llm-module.md)

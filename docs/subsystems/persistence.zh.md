@@ -8,7 +8,7 @@
 
 ## 已脱离会话的生命周期
 
-`SessionPersistence.remove(id)` 与 `move(id, newCwd)` 是 rc.8 的生命周期操作。它们经过共享协调器执行，协调器将每个 id 与待处理写入串行化，拒绝活动或正在退休的会话，并在删除后清除脱离状态。提供方只负责物理操作：JSONL 在项目目录间移动工件，SQLite 在事务中更新会话行。两个操作对不存在的 id 都是幂等的；调用方必须先停止活动 agent。
+`SessionLifecycle.remove(id)` 与 `move(id, newCwd)` 是独立的可选生命周期操作，由第一方 JSONL 和 SQLite provider 通过 `ctx.sessionLifecycle` 提供。它们经过共享协调器执行，协调器将每个 id 与待处理写入串行化，拒绝活动或正在退休的会话，并在删除后清除脱离状态。提供方只负责物理操作：JSONL 在项目目录间移动工件，SQLite 在事务中更新会话行。两个操作对不存在的 id 都是幂等的；调用方必须先停止活动 agent。第三方 rc.8 persistence provider 可以不提供该服务，Host 和 Workspace 会明确报告服务不可用。
 
 ## flush 检查点
 
@@ -385,5 +385,5 @@ abstract listSnapshots(signal?: AbortSignal): Promise<SessionPersistenceSnapshot
 
 Types: [SessionEvent](session.md) · [SessionId](core.md)
 
-Source: [`packages/session/session-persistence/src/index.ts:84`](../../packages/session/session-persistence/src/index.ts)
+Source: [`packages/session/session-persistence/src/index.ts:87`](../../packages/session/session-persistence/src/index.ts)
 <!-- END GENERATED cordis-surface -->

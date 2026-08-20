@@ -7,6 +7,12 @@
     "docs/cordis-api/inherited.md",
     "docs/i18n/style-samples.md",
     "docs/i18n/terminology.md",
-    "docs/i18n/translation-prompt.md"
+    "docs/i18n/translation-prompt.md",
+    "docs/codex-sessions/completed/2026-08-20_1110_fix-web-service.md",
+    "docs/codex-sessions/completed/2026-08-20_1135_compare-llm-adapters.md",
+    "docs/codex-sessions/completed/2026-08-20_1205_design-free-provider-router.md",
+    "docs/codex-sessions/completed/2026-08-20_1240_remove-fcc-llm-module.md",
+    "docs/codex-sessions/completed/2026-08-20_1300_restore-session-lifecycle.md",
+    "docs/codex-sessions/completed/2026-08-20_1315-fix-stale-llm-openai-loader.md"
   ]
 }
