@@ -2942,6 +2942,134 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         return ok(request, { archivedSessionIds: [...ctx.workspaceRegistry.archivedSessionIds] })
       },
 
+      async deleteSession(request) {
+        const { sessionId } = request.payload
+        if (ctx.sessions.get(sessionId) !== undefined) {
+          // A live agent blocks a destructive delete; dispose it first so the
+          // conversation can be removed. Only agents this proxy owns have a
+          // retained handle (the same set session.stop can release); live
+          // agents without one keep the session-live guard.
+          const agent = ctx.agents.get(sessionId)
+          if (agent !== undefined) {
+            let owned: boolean
+            try {
+              owned = await disposeOwnedAgent(agent)
+            } catch (error: unknown) {
+              return err(request, {
+                code: 'internal',
+                message: `failed to stop session "${sessionId}": ${String(error)}`,
+                details: { sessionId },
+              })
+            }
+            if (!owned) {
+              return err(request, {
+                code: 'session-live',
+                message: `session "${sessionId}" has a live agent this proxy does not own`,
+                details: { sessionId },
+              })
+            }
+          }
+          if (ctx.sessions.get(sessionId) !== undefined) {
+            return err(request, {
+              code: 'session-live',
+              message: `session "${sessionId}" has a live agent`,
+              details: { sessionId },
+            })
+          }
+        }
+        const admin = ctx.get('sessionPersistenceAdmin')
+        if (admin === undefined) {
+          return err(request, { code: 'internal', message: 'session persistence admin is unavailable', details: {} })
+        }
+        const header = (await ctx.sessionPersistence.list()).find(stored => stored.id === sessionId)
+        if (header === undefined) {
+          return err(request, {
+            code: 'session-not-found',
+            message: `session "${sessionId}" is not in persistence`,
+            details: { sessionId },
+          })
+        }
+        if (header.origin === 'subagent') {
+          return err(request, {
+            code: 'session-subagent',
+            message: `session "${sessionId}" belongs to a subagent`,
+            details: { sessionId },
+          })
+        }
+        await admin.destroy(sessionId)
+        await ctx.workspaceRegistry.unaccountSession(sessionId)
+        return ok(request, { sessionId })
+      },
+
+      async moveSession(request) {
+        const { workspaceId, sessionId } = request.payload
+        if (ctx.sessions.get(sessionId) !== undefined) {
+          // Relocating a live session first disposes its agent: the session's
+          // file operations and log writes are anchored to the old cwd, so
+          // the agent must be gone before the header is rewritten. Only
+          // proxy-owned agents have a retained handle; live agents without
+          // one keep the session-live guard.
+          const agent = ctx.agents.get(sessionId)
+          if (agent !== undefined) {
+            let owned: boolean
+            try {
+              owned = await disposeOwnedAgent(agent)
+            } catch (error: unknown) {
+              return err(request, {
+                code: 'internal',
+                message: `failed to stop session "${sessionId}": ${String(error)}`,
+                details: { sessionId },
+              })
+            }
+            if (!owned) {
+              return err(request, {
+                code: 'session-live',
+                message: `session "${sessionId}" has a live agent this proxy does not own`,
+                details: { sessionId },
+              })
+            }
+          }
+          if (ctx.sessions.get(sessionId) !== undefined) {
+            return err(request, {
+              code: 'session-live',
+              message: `session "${sessionId}" has a live agent`,
+              details: { sessionId },
+            })
+          }
+        }
+        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(workspaceId))
+        if (workspace === undefined) return workspaceNotFound(request, workspaceId)
+        const admin = ctx.get('sessionPersistenceAdmin')
+        if (admin === undefined) {
+          return err(request, { code: 'internal', message: 'session persistence admin is unavailable', details: {} })
+        }
+        const header = (await ctx.sessionPersistence.list()).find(stored => stored.id === sessionId)
+        if (header === undefined) {
+          return err(request, {
+            code: 'session-not-found',
+            message: `session "${sessionId}" is not in persistence`,
+            details: { sessionId },
+          })
+        }
+        if (header.origin === 'subagent') {
+          return err(request, {
+            code: 'session-subagent',
+            message: `session "${sessionId}" belongs to a subagent`,
+            details: { sessionId },
+          })
+        }
+        try {
+          await ctx.workspaceRegistry.moveSession(sessionId, brandWorkspaceId(workspaceId))
+        } catch (error: unknown) {
+          return err(request, {
+            code: 'internal',
+            message: `failed to move session "${sessionId}": ${String(error)}`,
+            details: {},
+          })
+        }
+        return ok(request, { sessionId, workspaceId })
+      },
+
     },
 
     host: {

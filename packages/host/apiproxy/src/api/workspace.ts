@@ -120,6 +120,29 @@ export interface WorkspaceApi {
   archiveSession(request: RpcRequest<{ sessionId: SessionId }>):
   Promise<RpcResponse<{ archivedSessionIds: SessionId[] }>>
 
+  /**
+   * Permanently deletes one session: its agent is disposed if live, the
+   * durable artifact is physically removed, and the session is removed from
+   * every workspace's accounting and the archive set. A live agent that this
+   * proxy does not own fails with `session-live`; an absent session fails
+   * with `session-not-found`; a subagent-owned session fails with
+   * `session-subagent`.
+   */
+  deleteSession(request: RpcRequest<{ sessionId: SessionId }>):
+  Promise<RpcResponse<{ sessionId: SessionId }>>
+
+  /**
+   * Relocates one session to a target workspace: rewrites the persisted
+   * header `cwd` to the target workspace's path, moves the durable artifact,
+   * detaches the session from every workspace, and attaches it to the target.
+   * A live agent that this proxy does not own fails with `session-live`; an
+   * absent session fails with `session-not-found`; a subagent-owned session
+   * fails with `session-subagent`; an unknown workspace fails with
+   * `workspace-not-found`.
+   */
+  moveSession(request: RpcRequest<{ workspaceId: WorkspaceId; sessionId: SessionId }>):
+  Promise<RpcResponse<{ sessionId: SessionId; workspaceId: WorkspaceId }>>
+
   listTreeLevel(
     request: RpcRequest<{ workspaceId: WorkspaceId; path?: string }>, signal: AbortSignal,
   ): Promise<RpcResponse<WorkspaceTreeLevel>>

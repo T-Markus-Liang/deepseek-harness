@@ -6,7 +6,7 @@ import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
 import type { Agent, AgentFactory } from '@deepseek-ai/dsh-agent'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import type { Session } from '@deepseek-ai/dsh-session'
+import type { Session, SessionHeader } from '@deepseek-ai/dsh-session'
 import Storage from '@deepseek-ai/dsh-storage'
 import { DomainFacility } from '@deepseek-ai/dsh-storage-domain'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
@@ -65,6 +65,7 @@ async function harness(
     openPath?: (path: string, signal: AbortSignal) => Promise<void>
     canOpenPath?: () => boolean
     sessionPersistence?: { list: (signal?: AbortSignal) => Promise<unknown[]>; destroy?: (id: unknown) => Promise<void> }
+    sessionPersistenceAdmin?: { destroy?: (id: unknown) => Promise<void>; relocate?: (id: unknown, cwd: string) => Promise<void> }
   } = {},
 ) {
   const ctx = new Context()
@@ -77,6 +78,9 @@ async function harness(
   ctx.storage.mount('domain', storageDomain)
   ctx.provide('storageDomain', storageDomain)
   ctx.provide('sessionPersistence', (extras.sessionPersistence ?? { list: () => Promise.resolve([]) }) as never)
+  if (extras.sessionPersistenceAdmin !== undefined) {
+    ctx.provide('sessionPersistenceAdmin', extras.sessionPersistenceAdmin as never)
+  }
   await ctx.plugin(WorkspaceRegistry)
 
   const factory: AgentFactory = {
@@ -574,5 +578,131 @@ describe('Host Workspace increments', () => {
       error: { code: 'session-not-found', details: { sessionId: 'session-ghost' } },
     })
     abort.abort()
+  })
+})
+
+describe('workspace.deleteSession / workspace.moveSession', () => {
+  function persistence(
+    headers: SessionHeader[],
+  ): {
+    list: (signal?: AbortSignal) => Promise<SessionHeader[]>
+    headers: SessionHeader[]
+  } {
+    return {
+      list: () => Promise.resolve([...headers]),
+      headers,
+    }
+  }
+
+  it('deleteSession stops a tracked live agent, then destroys persistence and unaccounts', async () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dsh-apiproxy-workspace-')))
+    const sessionId = SessionId('session-delete-live')
+    const project = stageDir(root, 'project')
+    const destroy = vi.fn(() => Promise.resolve())
+    const headers: SessionHeader[] = []
+    const { api, ctx } = await harness(root, undefined, {
+      sessionPersistence: persistence(headers),
+      sessionPersistenceAdmin: { destroy },
+    })
+    const workspace = expectOk(await api.workspace.create(request({ path: project }))).workspace
+    // Creating through the API routes the handle into the proxy's retained
+    // agentHandles map (the same set session.stop can release).
+    expectOk(await api.sessions.create(request({ workspaceId: workspace.workspaceId, sessionId })))
+    expect(ctx.sessions.get(sessionId)).toBeDefined()
+    expect(ctx.agents.get(sessionId)).toBeDefined()
+    // Only now expose the persisted header so deleteSession can find it.
+    headers.push({ version: 0, id: sessionId, createdAt: 100, cwd: project } as SessionHeader)
+
+    const res = await api.workspace.deleteSession(request({ sessionId }))
+    expectOk(res)
+    expect(destroy).toHaveBeenCalledWith(sessionId)
+    // the agent and its session were both stopped
+    expect(ctx.agents.get(sessionId)).toBeUndefined()
+    expect(ctx.sessions.get(sessionId)).toBeUndefined()
+  })
+
+  it('moveSession stops a tracked live agent, then relocates the session', async () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dsh-apiproxy-workspace-')))
+    const sessionId = SessionId('session-move-live')
+    const sourcePath = stageDir(root, 'source')
+    const relocate = vi.fn(() => Promise.resolve())
+    const headers: SessionHeader[] = []
+    const { api, ctx } = await harness(root, undefined, {
+      sessionPersistence: persistence(headers),
+      sessionPersistenceAdmin: { relocate },
+    })
+    const source = expectOk(await api.workspace.create(request({ path: sourcePath }))).workspace
+    const target = expectOk(await api.workspace.create(request({ path: stageDir(root, 'target') }))).workspace
+    expectOk(await api.sessions.create(request({ workspaceId: source.workspaceId, sessionId })))
+    expect(ctx.sessions.get(sessionId)).toBeDefined()
+    headers.push({ version: 0, id: sessionId, createdAt: 100, cwd: sourcePath } as SessionHeader)
+
+    const res = await api.workspace.moveSession(request({ workspaceId: target.workspaceId, sessionId }))
+    expectOk(res)
+    // The workspace registry's real moveSession enqueues the durable relocate
+    // (the admin service) and re-accounts the session; assert the durable
+    // relocate reached the admin service.
+    expect(relocate).toHaveBeenCalledWith(sessionId, target.path)
+    // the live agent was stopped so relocation could proceed
+    expect(ctx.agents.get(sessionId)).toBeUndefined()
+    expect(ctx.sessions.get(sessionId)).toBeUndefined()
+  })
+
+  it('keeps session-live when the live agent has no tracked handle', async () => {
+    const { api, ctx, root } = await harness()
+    const workspace = expectOk(await api.workspace.create(request({ path: stageDir(root, 'project') }))).workspace
+    const sessionId = SessionId('session-live-untracked')
+    // A session attached without going through create/resume has no tracked
+    // handle: stop() cannot dispose it, so the destructive guard stays.
+    const session = ctx.sessions.create(sessionId, { meta: { cwd: workspace.path } })
+    ctx.agents.register(stubAgent(session))
+
+    const res = await api.workspace.deleteSession(request({ sessionId }))
+    expect(res.result).toMatchObject({ ok: false, error: { code: 'session-live' } })
+    expect(ctx.sessions.get(sessionId)).toBeDefined()
+  })
+
+  it('rejects deleteSession for a session absent from persistence', async () => {
+    const { api } = await harness(undefined, undefined, {
+      sessionPersistenceAdmin: { destroy: vi.fn(() => Promise.resolve()) },
+    })
+    const res = await api.workspace.deleteSession(request({ sessionId: SessionId('session-ghost') }))
+    expect(res.result).toMatchObject({
+      ok: false,
+      error: { code: 'session-not-found', details: { sessionId: 'session-ghost' } },
+    })
+  })
+
+  it('rejects deleteSession for a subagent-owned session', async () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dsh-apiproxy-workspace-')))
+    const sessionId = SessionId('session-subagent-owned')
+    const destroy = vi.fn(() => Promise.resolve())
+    const headers: SessionHeader[] = [
+      { version: 0, id: sessionId, createdAt: 100, cwd: '/subagent', origin: 'subagent' } as SessionHeader,
+    ]
+    const { api } = await harness(root, undefined, {
+      sessionPersistence: persistence(headers),
+      sessionPersistenceAdmin: { destroy },
+    })
+    const res = await api.workspace.deleteSession(request({ sessionId }))
+    expect(res.result).toMatchObject({ ok: false, error: { code: 'session-subagent' } })
+    expect(destroy).not.toHaveBeenCalled()
+  })
+
+  it('rejects moveSession for an unknown workspace', async () => {
+    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dsh-apiproxy-workspace-')))
+    const sessionId = SessionId('session-move-unknown-ws')
+    const headers: SessionHeader[] = [
+      { version: 0, id: sessionId, createdAt: 100, cwd: '/source' } as SessionHeader,
+    ]
+    const { api } = await harness(root, undefined, {
+      sessionPersistence: persistence(headers),
+      sessionPersistenceAdmin: { relocate: vi.fn(() => Promise.resolve()) },
+    })
+    const res = await api.workspace.moveSession(request({
+      workspaceId: 'missing-workspace' as WorkspaceId,
+      sessionId,
+    }))
+    expect(res.result).toMatchObject({ ok: false, error: { code: 'workspace-not-found' } })
   })
 })
