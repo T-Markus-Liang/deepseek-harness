@@ -2318,6 +2318,11 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'sessionId', description: 'The session to unaccount.' }],
       },
       {
+        signature: 'moveSession(sessionId: SessionId, targetWorkspaceId: WorkspaceId): Promise<void>',
+        description: 'Relocate a session to a different workspace: rewrite the persisted header `cwd` to the target workspace\'s path, update the in-memory path mapping, detach from every workspace, and attach to the target. The session must not be live — the caller guarantees it.',
+        parameters: [{ name: 'sessionId', description: 'The session to move.' }, { name: 'targetWorkspaceId', description: 'The workspace to move the session into.' }],
+      },
+      {
         signature: 'async resolveByPath(path: string): Promise<Workspace | undefined>',
         description: 'Resolve by canonical directory path without creating or mutating a workspace. A missing path rejects during `realpath`; an existing unowned directory returns `undefined`.',
         parameters: [{ name: 'path', description: 'Existing directory path in any spelling.' }],
