@@ -6,7 +6,7 @@
  * @module @deepseek-ai/dsh-session-persistence-jsonl
  */
 
-import { Context } from '@deepseek-ai/cordis'
+import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { readdirSync } from 'node:fs'
 import { open, mkdir, readFile, readdir, realpath, link, rm, stat, truncate } from 'node:fs/promises'
@@ -21,6 +21,7 @@ import {
   type SessionInspection, type SessionPersistenceRevision as PersistenceRevision, type SessionRawArtifact,
   type StoredPrefix,
 } from '@deepseek-ai/dsh-session-persistence'
+import type { SessionLifecycle } from '@deepseek-ai/dsh-session-persistence'
 import type { SessionEvent, SessionId, SessionHeader, SessionPreparation } from '@deepseek-ai/dsh-session'
 import {
   encodeSegment, eventLines, logPath, logSuffix, parseHeaderMeta, projectDir, scanLog, sessionDir,
@@ -118,7 +119,7 @@ function isENOENT(error: unknown): boolean {
  * listeners. Its torn-tail marker carries the byte offset and any events
  * recovered from an incomplete final Zstandard frame.
  */
-export class JsonlSessionPersistence extends SessionPersistence implements PersistenceBackend<JsonlTornMarker> {
+export class JsonlSessionPersistence extends SessionPersistence implements PersistenceBackend<JsonlTornMarker>, SessionLifecycle {
   override readonly supportsRawArtifacts = true
 
   static inject = ['sessions']
@@ -163,6 +164,10 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     })
   }
 
+  protected [Service.init](): void {
+    this.ctx.provide('sessionLifecycle', this satisfies SessionLifecycle)
+  }
+
   // Each backend keeps the typed service API beside its storage hooks;
   // extracting these trivial forwards would add an inheritance layer.
   /* jscpd:ignore-start */
@@ -181,11 +186,13 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     return this.coordinator.append(id, events)
   }
 
-  override remove(id: SessionId): Promise<void> {
+  /** Remove one detached session through the shared persistence coordinator. */
+  remove(id: SessionId): Promise<void> {
     return this.coordinator.remove(id)
   }
 
-  override move(id: SessionId, newCwd: string): Promise<void> {
+  /** Move one detached session through the shared persistence coordinator. */
+  move(id: SessionId, newCwd: string): Promise<void> {
     return this.coordinator.move(id, newCwd)
   }
 

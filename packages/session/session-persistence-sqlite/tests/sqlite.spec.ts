@@ -412,12 +412,12 @@ describe('SessionPersistenceSqlite physical packing', () => {
 })
 
 describe('SessionPersistenceSqlite session lifecycle', () => {
-  it('exposes lifecycle operations on the persistence service', async () => {
+  it('exposes lifecycle operations on the independent lifecycle service', async () => {
     const path = await freshDbPath()
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    expect(ctx.sessionPersistence.remove).toBeDefined()
+    expect(ctx.sessionLifecycle?.remove).toBeDefined()
     await ctx.fiber.dispose()
   })
 
@@ -431,7 +431,7 @@ describe('SessionPersistenceSqlite session lifecycle', () => {
     await ctx.sessionPersistence.append(header.id, chunkLog(4))
     expect((await ctx.sessionPersistence.list()).map(h => h.id)).toContain(header.id)
 
-    await ctx.sessionPersistence.remove(header.id)
+    await ctx.sessionLifecycle!.remove(header.id)
 
     expect((await ctx.sessionPersistence.list()).map(h => h.id)).not.toContain(header.id)
     await expect(ctx.sessionPersistence.inspect(header.id)).rejects.toThrow()
@@ -447,7 +447,7 @@ describe('SessionPersistenceSqlite session lifecycle', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    await expect(ctx.sessionPersistence.remove(SessionId('absent'))).resolves.toBeUndefined()
+    await expect(ctx.sessionLifecycle!.remove(SessionId('absent'))).resolves.toBeUndefined()
     await ctx.fiber.dispose()
   })
 
@@ -462,7 +462,7 @@ describe('SessionPersistenceSqlite session lifecycle', () => {
     const before = (await ctx.sessionPersistence.listSnapshots())
       .find(snapshot => snapshot.header.id === header.id)?.revision
 
-    await ctx.sessionPersistence.move(header.id, '/target')
+    await ctx.sessionLifecycle!.move(header.id, '/target')
 
     const loaded = await ctx.sessionPersistence.load(header.id)
     expect(loaded.meta.cwd).toBe('/target')
@@ -477,7 +477,7 @@ describe('SessionPersistenceSqlite session lifecycle', () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    await expect(ctx.sessionPersistence.move(SessionId('absent'), '/target')).resolves.toBeUndefined()
+    await expect(ctx.sessionLifecycle!.move(SessionId('absent'), '/target')).resolves.toBeUndefined()
     await ctx.fiber.dispose()
   })
 })

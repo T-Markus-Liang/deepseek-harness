@@ -69,12 +69,12 @@ class TestPersistence extends SessionPersistence {
     return Promise.resolve()
   }
 
-  override remove(id: SessionIdType): Promise<void> {
+  remove(id: SessionIdType): Promise<void> {
     TestPersistence.entries.delete(id)
     return Promise.resolve()
   }
 
-  override move(_id: SessionIdType, _newCwd: string): Promise<void> {
+  move(_id: SessionIdType, _newCwd: string): Promise<void> {
     return Promise.resolve()
   }
 

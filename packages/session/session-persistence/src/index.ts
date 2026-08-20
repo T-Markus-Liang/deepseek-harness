@@ -9,10 +9,12 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import { SessionPreparation } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionId, SessionHeader } from '@deepseek-ai/dsh-session'
 import type { SessionPersistenceRevision } from './revision.ts'
+import type { SessionLifecycle } from './lifecycle.ts'
 
 // Re-export the metadata vocabulary so Consumers import it from the Service Definition.
 export type { SessionHeader } from '@deepseek-ai/dsh-session'
 export { SessionPersistenceRevision } from './revision.ts'
+export type { SessionLifecycle } from './lifecycle.ts'
 
 /** Lightweight immutable source identity returned without loading a full log. */
 export interface SessionPersistenceSnapshot {
@@ -60,6 +62,7 @@ export type {
 declare module '@deepseek-ai/cordis' {
   interface Context {
     sessionPersistence: SessionPersistence
+    sessionLifecycle?: SessionLifecycle
   }
 }
 
@@ -219,25 +222,6 @@ export abstract class SessionPersistence extends Service {
    */
   abstract readFrom(id: SessionId, fromSeq: number, signal?: AbortSignal):
   Promise<{ meta: SessionHeader; events: SessionEvent[] }>
-
-  /**
-   * Remove every durable artifact for one detached session. The coordinator
-   * rejects live or still-tracked sessions before invoking the backend.
-   * @param id - persisted session id to remove.
-   */
-  remove(_id: SessionId): Promise<void> {
-    return Promise.reject(new Error('this session persistence backend does not support removing sessions'))
-  }
-
-  /**
-   * Move one detached session to a new project directory and rewrite its
-   * persisted cwd. The coordinator serializes the operation with all writes.
-   * @param id - persisted session id to move.
-   * @param newCwd - absolute path of the destination project directory.
-   */
-  move(_id: SessionId, _newCwd: string): Promise<void> {
-    return Promise.reject(new Error('this session persistence backend does not support moving sessions'))
-  }
 
   /**
    * Lightweight listing from metadata, without a full-log parse.

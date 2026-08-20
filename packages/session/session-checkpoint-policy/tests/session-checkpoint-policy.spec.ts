@@ -27,8 +27,8 @@ class TestPersistence extends SessionPersistence {
   readFrom(_id: SessionId, _fromSeq: number): Promise<{ meta: SessionHeader; events: SessionEvent[] }> {
     return Promise.reject(new Error('not used'))
   }
-  override remove(_id: SessionId): Promise<void> { return Promise.resolve() }
-  override move(_id: SessionId, _newCwd: string): Promise<void> { return Promise.resolve() }
+  remove(_id: SessionId): Promise<void> { return Promise.resolve() }
+  move(_id: SessionId, _newCwd: string): Promise<void> { return Promise.resolve() }
   list(): Promise<SessionHeader[]> { return Promise.resolve([]) }
   listSnapshots(): Promise<never[]> { return Promise.resolve([]) }
 }

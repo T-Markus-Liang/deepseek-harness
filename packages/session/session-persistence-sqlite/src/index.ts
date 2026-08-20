@@ -22,6 +22,7 @@ import {
   type SessionLocation,
   type SessionPersistenceSnapshot,
 } from '@deepseek-ai/dsh-session-persistence'
+import type { SessionLifecycle } from '@deepseek-ai/dsh-session-persistence'
 import type { JournalMode } from './schema.ts'
 import { SqliteStore } from './store.ts'
 
@@ -48,7 +49,7 @@ export interface Config {
 /**
  * SQLite `SessionPersistence` provider with a schema-owned physical codec.
  */
-export class SqliteSessionPersistence extends SessionPersistence {
+export class SqliteSessionPersistence extends SessionPersistence implements SessionLifecycle {
   override readonly supportsRawArtifacts = false
   override readonly name = 'session-persistence-sqlite'
 
@@ -86,6 +87,7 @@ export class SqliteSessionPersistence extends SessionPersistence {
   /** Reject self-contained path and ownership failures without loading Node SQLite. */
   protected async [Service.init](): Promise<void> {
     await this.store.validatePath()
+    this.ctx.provide('sessionLifecycle', this satisfies SessionLifecycle)
   }
 
   /** SQLite has one database, not an independent per-session artifact. */
@@ -101,11 +103,13 @@ export class SqliteSessionPersistence extends SessionPersistence {
     return this.coordinator.append(id, events)
   }
 
-  override remove(id: SessionId): Promise<void> {
+  /** Remove one detached session through the shared persistence coordinator. */
+  remove(id: SessionId): Promise<void> {
     return this.coordinator.remove(id)
   }
 
-  override move(id: SessionId, newCwd: string): Promise<void> {
+  /** Move one detached session through the shared persistence coordinator. */
+  move(id: SessionId, newCwd: string): Promise<void> {
     return this.coordinator.move(id, newCwd)
   }
 

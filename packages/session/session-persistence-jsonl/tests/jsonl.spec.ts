@@ -796,14 +796,14 @@ describe('JsonlSessionPersistence: session lifecycle', () => {
     await ctx.sessionPersistence.append(m.id, oneTurnLog())
     expect(await stat(rawLogPath(root, '/work', m.id))).toBeDefined()
 
-    await ctx.sessionPersistence.remove(m.id)
+    await ctx.sessionLifecycle!.remove(m.id)
 
     await expect(stat(rawLogPath(root, '/work', m.id))).rejects.toThrow()
     expect((await ctx.sessionPersistence.list()).map(h => h.id)).not.toContain(m.id)
   })
 
   it('remove is idempotent for an absent session', async () => {
-    await expect(ctx.sessionPersistence.remove(SessionId('absent'))).resolves.toBeUndefined()
+    await expect(ctx.sessionLifecycle!.remove(SessionId('absent'))).resolves.toBeUndefined()
   })
 
   it('move rewrites the header cwd and moves the artifact', async () => {
@@ -811,7 +811,7 @@ describe('JsonlSessionPersistence: session lifecycle', () => {
     await ctx.sessionPersistence.create(m)
     await ctx.sessionPersistence.append(m.id, oneTurnLog())
 
-    await ctx.sessionPersistence.move(m.id, '/target')
+    await ctx.sessionLifecycle!.move(m.id, '/target')
 
     const loaded = await ctx.sessionPersistence.load(m.id)
     expect(loaded.meta.cwd).toBe('/target')
@@ -825,7 +825,7 @@ describe('JsonlSessionPersistence: session lifecycle', () => {
     await ctx.sessionPersistence.create(m)
     await ctx.sessionPersistence.append(m.id, oneTurnLog())
 
-    await ctx.sessionPersistence.move(m.id, '/work')
+    await ctx.sessionLifecycle!.move(m.id, '/work')
 
     expect(await stat(rawLogPath(root, '/work', m.id))).toBeDefined()
   })

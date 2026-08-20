@@ -10,7 +10,7 @@ import { stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { Context, Service } from '@deepseek-ai/cordis'
 import type { SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-persistence'
+import type { SessionLifecycle } from '@deepseek-ai/dsh-session-persistence'
 import type { DomainGlobal, KvTable } from '@deepseek-ai/dsh-storage-domain'
 import { WorkspaceEntity } from './entity.ts'
 import type { WorkspaceEntityHost } from './entity.ts'
@@ -67,6 +67,7 @@ export class WorkspaceOrderInvalidError extends Error {
 declare module '@deepseek-ai/cordis' {
   interface Context {
     workspaceRegistry: WorkspaceRegistry
+    sessionLifecycle?: SessionLifecycle
   }
 }
 
@@ -305,7 +306,9 @@ export class WorkspaceRegistry extends Service {
       if (target === undefined) {
         throw new Error(`workspace '${targetWorkspaceId}' not found`)
       }
-      await this.ctx.sessionPersistence.move(sessionId, target.path)
+      const lifecycle = this.ctx.get('sessionLifecycle')
+      if (lifecycle === undefined) throw new Error('session lifecycle service is unavailable')
+      await lifecycle.move(sessionId, target.path)
       // Sync the in-memory caches with the moved header before attach
       // validates cwd against the target path.
       const oldHeader = this.headers.get(sessionId)

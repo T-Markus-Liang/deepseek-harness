@@ -663,7 +663,10 @@ export class PersistenceCoordinator<TornMarker = unknown> {
     this.states.set(meta.id, { meta, cursor: 0, materialized: false })
   }
 
-  /** Remove one detached session and release all coordinator bookkeeping. */
+  /**
+   * Remove one detached session and release all coordinator bookkeeping.
+   * @param id - persisted session id to remove.
+   */
   remove(id: SessionId): Promise<void> {
     return this.lifecycleGuard(id, 'remove', async () => {
       if (this.backend.removeArtifact === undefined) {
@@ -675,7 +678,11 @@ export class PersistenceCoordinator<TornMarker = unknown> {
     })
   }
 
-  /** Move one detached session through the backend's durable lifecycle seam. */
+  /**
+   * Move one detached session through the backend's durable lifecycle seam.
+   * @param id - persisted session id to move.
+   * @param newCwd - absolute destination project directory.
+   */
   move(id: SessionId, newCwd: string): Promise<void> {
     return this.lifecycleGuard(id, 'move', async () => {
       if (this.backend.moveArtifact === undefined) {
