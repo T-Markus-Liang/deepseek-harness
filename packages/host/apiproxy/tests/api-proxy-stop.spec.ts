@@ -69,6 +69,20 @@ describe('sessions.stop', () => {
     expect(disposed).toHaveBeenCalledOnce()
   })
 
+  it('retains ownership when disposal fails so stop can be retried', async () => {
+    const { api, disposed } = await composed()
+    disposed.mockRejectedValueOnce(new Error('busy teardown'))
+    await api.sessions.create(request({ sessionId: sid('session-stop-retry'), cwd: '/tmp' }))
+
+    const failed = await api.sessions.stop(request({ sessionId: sid('session-stop-retry') }))
+    expect(failed.result.ok).toBe(false)
+    if (!failed.result.ok) expect(failed.result.error.message).toContain('busy teardown')
+
+    const retried = await api.sessions.stop(request({ sessionId: sid('session-stop-retry') }))
+    expect(retried.result.ok).toBe(true)
+    expect(disposed).toHaveBeenCalledTimes(2)
+  })
+
   it('rejects a session with no live agent', async () => {
     const { api } = await composed()
     const stopped = await api.sessions.stop(request({ sessionId: sid('session-stop-absent') }))

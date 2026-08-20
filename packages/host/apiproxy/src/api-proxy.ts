@@ -1073,14 +1073,23 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
   /** Client-chosen identity creation/resume, deduplicated across concurrent retries. */
   const sessionCreations = new Map<SessionId, Promise<Agent>>()
   /**
-   * The AgentHandle retained from every create/resume this proxy issued, keyed
-   * by session id. The registry exposes no dispose path, so `session.stop`
-   * needs the exact handle to release an agent (stop loop, unregister, remove
-   * its session from the store). An agent this proxy did not create — a
-   * loop-owned config agent or a subagent — has no entry here and is not
-   * stoppable through this seam.
+   * Agent handles owned by this proxy. Entries carry the Agent identity so a
+   * delayed disposal cannot delete a replacement handle for the same Session id.
    */
   const agentHandles = new Map<SessionId, AgentHandle>()
+  const retainAgentHandle = (sessionId: SessionId, handle: AgentHandle): void => {
+    agentHandles.set(sessionId, handle)
+  }
+  const releaseAgentHandle = (agent: Agent): void => {
+    if (agentHandles.get(agent.id)?.agent === agent) agentHandles.delete(agent.id)
+  }
+  const disposeOwnedAgent = async (agent: Agent): Promise<boolean> => {
+    const handle = agentHandles.get(agent.id)
+    if (handle?.agent !== agent) return false
+    await handle.dispose()
+    if (agentHandles.get(agent.id) === handle) agentHandles.delete(agent.id)
+    return true
+  }
   /** Serializes path ownership and explicit title checks with Workspace mutations. */
   let workspaceCreationChain = Promise.resolve()
   const pendingQuestions = new Map<RpcId, PendingQuestion>()
@@ -1226,7 +1235,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
       (await composeAgent(resolveSessionPreset({ header: meta, events }))).setup,
     // The resolver's cold resumes also produce live agents this proxy owns;
     // route their handles into the same map `session.stop` reads.
-    onHandle: (sessionId, handle) => { agentHandles.set(sessionId, handle) },
+    onHandle: retainAgentHandle,
   })
 
   /** Send one transient frame to every connected mux consumer. */
@@ -1312,6 +1321,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     if (agent?.session !== session) return
     broadcast({ type: 'session/queue', sessionId: session.id, items: queueItems(agent, event.data) })
   })
+  ctx.on('agent/disposed', ({ agent }) => { releaseAgentHandle(agent) })
 
   /** Remove a wait before settling it: synchronous deletion makes the first claimant win. */
   function claimQuestion(pending: PendingQuestion, outcome: 'answered' | 'cancelled'): void {
@@ -1621,7 +1631,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             agentOptions: agentOptions(),
             setup: (await composeAgent(storedPreset)).setup,
           })
-          agentHandles.set(sessionId, resumed)
+          retainAgentHandle(sessionId, resumed)
           return resumed.agent
         }
 
@@ -1640,7 +1650,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           },
           setup: composition.setup,
         })
-        agentHandles.set(sessionId, created)
+        retainAgentHandle(sessionId, created)
         return created.agent
       })().catch((error: unknown) => {
         // Another Host entry path may have published the same identity while
@@ -2373,7 +2383,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           })
           // Same handle retention as ensureSession: the forked child is a live
           // agent this proxy owns, so `session.stop` must be able to release it.
-          agentHandles.set(childId, forked)
+          retainAgentHandle(childId, forked)
         } catch (error: unknown) {
           return err(request, {
             code: 'internal',
@@ -2589,16 +2599,14 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             details: { sessionId },
           }))
         }
-        const handle = agentHandles.get(sessionId)
-        if (handle === undefined) {
-          return Promise.resolve(err(request, {
-            code: 'internal',
-            message: `session "${sessionId}" has a live agent this proxy does not own`,
-            details: {},
-          }))
-        }
-        return handle.dispose().then(
-          () => ok(request, { stopped: true as const }),
+        return disposeOwnedAgent(agent).then(
+          owned => owned
+            ? ok(request, { stopped: true as const })
+            : err(request, {
+              code: 'internal',
+              message: `session "${sessionId}" has a live agent this proxy does not own`,
+              details: {},
+            }),
           (error: unknown) => err(request, {
             code: 'internal',
             message: `failed to stop session "${sessionId}": ${String(error)}`,
