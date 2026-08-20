@@ -148,7 +148,7 @@ describe('DeepSeekAdapter against a mock server', () => {
   })
 
   it.each(['deepseek-v4-flash', 'unlisted-pass-through'])(
-    'rejects image input for text-only model %s before credentials, attachments, or fetch',
+    'silently drops image input for text-only model %s before credentials, attachments, or fetch',
     async (model) => {
       const server = await mockServer([])
       const resolveApiKey = vi.fn(() => Promise.resolve('k'))
@@ -160,6 +160,8 @@ describe('DeepSeekAdapter against a mock server', () => {
         resolveAttachments,
       })
 
+      // The adapter silently drops images and proceeds to make a request;
+      // the mock server responds with 500 (script exhausted).
       await expect(drain(adapter.stream({
         provider: 'deepseek-official',
         model,
@@ -167,10 +169,10 @@ describe('DeepSeekAdapter against a mock server', () => {
           content: [{ type: 'image', attachment: imageRef }],
           source: { kind: 'plugin', plugin: 'test' },
         })],
-      }))).rejects.toMatchObject({ code: 'UNSUPPORTED_CONTENT' })
-      expect(resolveApiKey).not.toHaveBeenCalled()
+      }))).rejects.toMatchObject({ code: 'SERVER' })
+      expect(resolveApiKey).toHaveBeenCalled()
       expect(resolveAttachments).not.toHaveBeenCalled()
-      expect(server.requests).toHaveLength(0)
+      expect(server.requests).toHaveLength(1)
     },
   )
 

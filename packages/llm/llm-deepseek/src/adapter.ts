@@ -237,17 +237,17 @@ export class DeepSeekAdapter extends LlmAdapter {
     if (hasImages) {
       const model = connection.models.find(entry => entry.id === options.model)
       if (model?.inputModalities?.includes('image') !== true) {
-        throw new LlmError(
-          `DeepSeek model "${options.model}" does not accept image input.`,
-          'UNSUPPORTED_CONTENT',
-        )
-      }
-      attachments = this.config.resolveAttachments?.()
-      if (attachments === undefined) {
-        throw new LlmError(
-          'DeepSeek image conversion requires the durable attachment service.',
-          'UNSUPPORTED_CONTENT',
-        )
+        // Model does not support images; silently drop image blocks from
+        // history and proceed with the text-only path. The error is raised
+        // at the admission layer when the user actively attaches new images.
+      } else {
+        attachments = this.config.resolveAttachments?.()
+        if (attachments === undefined) {
+          throw new LlmError(
+            'DeepSeek image conversion requires the durable attachment service.',
+            'UNSUPPORTED_CONTENT',
+          )
+        }
       }
     }
     const apiKey = await this.config.resolveApiKey(connection)

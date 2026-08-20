@@ -73,11 +73,16 @@ describe('pi-ai request context conversion', () => {
       ],
     })
 
-    expect(() => toPiContext(request([user([{
+    // Without attachments, images are silently dropped instead of throwing.
+    expect(toPiContext(request([user([{
       type: 'tool-result',
       toolCallId: callId,
       content: [{ type: 'image', attachment: ref }],
-    }])]))).toThrow(/durable attachment service/)
+    }])]))).toMatchObject({
+      messages: [
+        { role: 'toolResult', toolCallId: 'call-1', content: [{ type: 'text', text: '(no output)' }] },
+      ],
+    })
   })
 
   it('resolves user and tool-result images while preserving explicit fallbacks', async () => {
