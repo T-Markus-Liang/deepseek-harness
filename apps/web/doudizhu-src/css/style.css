@@ -223,6 +223,16 @@ body {
   flex-shrink: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   font-size: 22px;
+  overflow: hidden;
+}
+
+/* 真人+二次元风格头像图片 */
+.player-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 /* 角色标签（方言/性格） */

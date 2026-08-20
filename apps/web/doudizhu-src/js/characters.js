@@ -6,7 +6,7 @@ const CHARACTER_POOL = [
   {
     id: 'laohu',
     name: '老胡',
-    avatar: '🧔',
+    avatar: '/avatars/laohu.jpg',
     tag: '东北大叔',
     personality: 'aggressive',   // 豪爽激进：爱叫地主、爱炸
     voice: 'laohu'               // 复用东北方言语音库
@@ -14,7 +14,7 @@ const CHARACTER_POOL = [
   {
     id: 'xiaodai',
     name: '小呆',
-    avatar: '👩',
+    avatar: '/avatars/xiaodai.jpg',
     tag: '四川大妈',
     personality: 'aggressive',   // 泼辣果断
     voice: 'xiaodai'             // 复用四川方言语音库
@@ -22,7 +22,7 @@ const CHARACTER_POOL = [
   {
     id: 'guangdong',
     name: '阿珍',
-    avatar: '👧',
+    avatar: '/avatars/guangdong.jpg',
     tag: '粤语女生',
     personality: 'balanced',     // 活泼稳健
     voice: 'human'               // 复用粤语语音库
@@ -30,7 +30,7 @@ const CHARACTER_POOL = [
   {
     id: 'beijing',
     name: '德叔',
-    avatar: '🧓',
+    avatar: '/avatars/beijing.jpg',
     tag: '北京大爷',
     personality: 'balanced',     // 侃爷稳健
     voice: 'laohu'               // 复用东北语音库（相近北方口音）
@@ -38,7 +38,7 @@ const CHARACTER_POOL = [
   {
     id: 'shanghai',
     name: '王阿姨',
-    avatar: '👵',
+    avatar: '/avatars/shanghai.jpg',
     tag: '上海阿姨',
     personality: 'conservative', // 精明保守：少叫地主、留大牌
     voice: 'xiaodai'             // 复用四川语音库
@@ -46,7 +46,7 @@ const CHARACTER_POOL = [
   {
     id: 'hunan',
     name: '辣妹',
-    avatar: '💃',
+    avatar: '/avatars/hunan.jpg',
     tag: '湖南辣妹',
     personality: 'aggressive',   // 火辣激进
     voice: 'human'               // 复用粤语语音库
@@ -54,7 +54,7 @@ const CHARACTER_POOL = [
   {
     id: 'shandong',
     name: '大壮',
-    avatar: '💪',
+    avatar: '/avatars/shandong.jpg',
     tag: '山东大汉',
     personality: 'balanced',     // 憨厚稳健
     voice: 'laohu'               // 复用东北语音库
@@ -62,7 +62,7 @@ const CHARACTER_POOL = [
   {
     id: 'yunnan',
     name: '阿妹',
-    avatar: '👸',
+    avatar: '/avatars/yunnan.jpg',
     tag: '云南阿妹',
     personality: 'conservative', // 温柔保守
     voice: 'human'               // 复用粤语语音库

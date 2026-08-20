@@ -15,7 +15,7 @@ class Game {
     // 积分从 localStorage 持久化读取（跨"再来一局"重载保留）；首次默认 1000，可扣为负值
     const saved = this._loadScores();
     this.players = [
-      { name: '你', hand: [], isLandlord: false, role: 'farmer', avatar: '😎', personality: 'balanced', voice: 'human', charId: 'you', score: saved[0] },
+      { name: '你', hand: [], isLandlord: false, role: 'farmer', avatar: '/avatars/you.jpg', personality: 'balanced', voice: 'human', charId: 'you', score: saved[0] },
       { name: opp1.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp1.avatar, personality: opp1.personality, voice: opp1.voice, charId: opp1.id, tag: opp1.tag, score: saved[1] },
       { name: opp2.name, hand: [], isLandlord: false, role: 'farmer', avatar: opp2.avatar, personality: opp2.personality, voice: opp2.voice, charId: opp2.id, tag: opp2.tag, score: saved[2] }
     ];

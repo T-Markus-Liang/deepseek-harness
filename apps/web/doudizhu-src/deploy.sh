@@ -96,6 +96,12 @@ cp -f "$DDZ_SRC" "$DST/doudizhu.html" 2>/dev/null || true
 cp "$DOU_DIR/public/doudizhu-plugin.js" "$DST/doudizhu-plugin.js" 2>/dev/null || true
 cp "$DOU_DIR/public/tts_preview.html" "$DST/tts_preview.html" 2>/dev/null || true
 cp "$DOU_DIR/public/dou_dizhu_bgm.mp3" "$DST/dou_dizhu_bgm.mp3" 2>/dev/null || true
+# 角色头像（真人+二次元风格，8 角色 + 玩家）
+if [ -d "$DOU_DIR/public/avatars" ]; then
+  rm -rf "$DST/avatars"
+  cp -R "$DOU_DIR/public/avatars" "$DST/avatars"
+  echo "avatars: $(ls $DST/avatars/*.jpg 2>/dev/null | wc -l | tr -d ' ') jpg"
+fi
 # 语音同步：从持久源 tts_assets 同步到服务器目录（dist）
 # 注意：绝不能在同步前 rm 源（源是持久目录，不在服务器目录内）
 TTS_SRC="$DOU_DIR/tts_assets"

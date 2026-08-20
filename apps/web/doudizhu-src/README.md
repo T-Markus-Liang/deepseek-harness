@@ -22,14 +22,16 @@ English | [中文](README.zh.md)
 
 | 角色 | 头像 | 标签 | 性格 | 语音映射 |
 |---|---|---|---|---|
-| 老胡 | 🧔 | 东北大叔 | aggressive | laohu（东北话） |
-| 小呆 | 👩 | 四川大妈 | aggressive | xiaodai（四川话） |
-| 阿珍 | 👧 | 粤语女生 | balanced | human（粤语） |
-| 德叔 | 🧓 | 北京大爷 | balanced | laohu |
-| 王阿姨 | 👵 | 上海阿姨 | conservative | xiaodai |
-| 辣妹 | 💃 | 湖南辣妹 | aggressive | human |
-| 大壮 | 💪 | 山东大汉 | balanced | laohu |
-| 阿妹 | 👸 | 云南阿妹 | conservative | human |
+| 老胡 | [laohu.jpg](public/avatars/laohu.jpg) | 东北大叔 | aggressive | laohu（东北话） |
+| 小呆 | [xiaodai.jpg](public/avatars/xiaodai.jpg) | 四川大妈 | aggressive | xiaodai（四川话） |
+| 阿珍 | [guangdong.jpg](public/avatars/guangdong.jpg) | 粤语女生 | balanced | human（粤语） |
+| 德叔 | [beijing.jpg](public/avatars/beijing.jpg) | 北京大爷 | balanced | laohu |
+| 王阿姨 | [shanghai.jpg](public/avatars/shanghai.jpg) | 上海阿姨 | conservative | xiaodai |
+| 辣妹 | [hunan.jpg](public/avatars/hunan.jpg) | 湖南辣妹 | aggressive | human |
+| 大壮 | [shandong.jpg](public/avatars/shandong.jpg) | 山东大汉 | balanced | laohu |
+| 阿妹 | [yunnan.jpg](public/avatars/yunnan.jpg) | 云南阿妹 | conservative | human |
+
+头像为 **真人+二次元风格** AI 生成立绘（gpt-image-2，morecode provider），存放在 `public/avatars/`（256×256 JPEG 压缩版，每张 ~25KB），deploy.sh 同步到服务器。玩家本人头像为 `you.jpg`。渲染时 `<img>` 圆形裁剪（`.player-avatar-img`）。
 
 新角色按 `voice` 字段映射到现有 3 个方言语音库（`_roleLines` / `speakViaCosy` 按 voice 查台词与音频），台词文本与音频 key 复用。
 
@@ -50,7 +52,7 @@ doudizhu-src/
 │   └── main.js         # 主控（事件绑定、AI 回合、人类出牌、语音触发、BGM 自动启动）
 ├── deploy.sh           # 一键部署到 DSH web 服务器 dist/（路径自动解析）
 ├── tts_assets/         # 语音持久源（tts_cosy_it 83 条 + tts_cosy 94 条回退）
-└── public/             # 插件脚本（doudizhu-plugin.js）、BGM、试听页
+└── public/             # 插件脚本（doudizhu-plugin.js）、BGM、试听页、角色头像（avatars/）
 ```
 
 ## 集成架构（抗 DSH 更新）

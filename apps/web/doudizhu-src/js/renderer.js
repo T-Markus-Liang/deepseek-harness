@@ -360,13 +360,17 @@ class Renderer {
     const roleIcon = player.role === 'landlord' ? '👑' : '🌾';
     const roleText = player.role === 'landlord' ? '地主' : '农民';
     const avatar = player.avatar || (playerIndex === 0 ? '😎' : '🤖');
+    const isImage = avatar.startsWith('/') || avatar.startsWith('http');
     const tag = player.tag ? `<span class="player-tag">${player.tag}</span>` : '';
     const score = (typeof player.score === 'number') ? player.score : 1000;
     const scoreClass = score < 0 ? 'score-negative' : '';
+    const avatarHtml = isImage
+      ? `<img class="player-avatar-img" src="${avatar}" alt="${player.name}" onerror="this.style.display='none'">`
+      : avatar;
     
     info.innerHTML = `
-      <div class="player-avatar" style="background-color: ${this._getAvatarColor(playerIndex)}">
-        ${avatar}
+      <div class="player-avatar">
+        ${avatarHtml}
       </div>
       <div class="player-details">
         <div class="player-name">${player.name} ${tag}</div>
