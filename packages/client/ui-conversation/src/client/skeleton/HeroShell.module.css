@@ -32,11 +32,16 @@
   column-gap: 14px;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 2;
   font-size: 32px;
   line-height: 40px;
-  font-weight: 560;
+  font-weight: 600;
   letter-spacing: -0.03em;
   color: var(--dsw-alias-label-primary);
+  text-shadow:
+    0 2px 14px color-mix(in srgb, var(--dsw-specific-black-whale-bg-bottom) 82%, transparent),
+    0 0 26px var(--dsw-specific-black-whale-glow);
 }
 
 .headlineText {
@@ -45,13 +50,15 @@
   background: linear-gradient(
     92deg,
     var(--dsw-alias-label-primary) 0%,
-    var(--dsw-specific-black-whale-accent) 52%,
+    var(--dsw-specific-black-whale-accent) 68%,
+    var(--dsw-specific-black-whale-accent) 82%,
     var(--dsw-alias-label-primary) 100%
   );
   background-clip: text;
-  color: transparent;
+  color: var(--dsw-alias-label-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px color-mix(in srgb, var(--dsw-specific-black-whale-bg-bottom) 72%, transparent));
 }
 
 .previewBadge {
@@ -84,8 +91,13 @@
 
 /* Keep the hero mark in the same primary ink as its headline. */
 .fish {
+  position: relative;
+  z-index: 1;
   color: var(--dsw-specific-black-whale-accent);
-  filter: drop-shadow(0 0 18px var(--dsw-specific-black-whale-glow));
+  filter:
+    drop-shadow(0 1px 2px color-mix(in srgb, var(--dsw-specific-black-whale-bg-bottom) 86%, transparent))
+    drop-shadow(0 0 10px var(--dsw-specific-black-whale-accent))
+    drop-shadow(0 0 22px var(--dsw-specific-black-whale-glow));
   transform: scale(1.12);
   transform-origin: 50% 60%;
 }
