@@ -170,6 +170,8 @@ export class FakeApiClient implements IApiClient {
     archiveSession: (payload: unknown) => this.record('workspace.archiveSession', payload, Promise.resolve(ok({
       archivedSessionIds: [(payload as { sessionId: SessionId }).sessionId],
     }))),
+    deleteSession: (payload: unknown) => this.record('workspace.deleteSession', payload, Promise.resolve(ok({ sessionId: (payload as { sessionId: SessionId }).sessionId }))),
+    moveSession: (payload: unknown) => this.record('workspace.moveSession', payload, Promise.resolve(ok({ sessionId: (payload as { sessionId: SessionId }).sessionId, workspaceId: (payload as { workspaceId: WorkspaceId }).workspaceId }))),
     listTreeLevel: (payload: unknown) => this.record('workspace.listTreeLevel', payload, Promise.resolve(ok({ path: '', entries: [], truncated: false }))),
     readFilePreview: (payload: unknown) => this.record('workspace.readFilePreview', payload, Promise.resolve(ok({ path: '', text: '', totalBytes: 0 }))),
     gitStatus: (payload: unknown) => this.record('workspace.gitStatus', payload, Promise.resolve(ok({ branch: 'fake', ahead: 0, behind: 0, files: [], truncated: false }))),

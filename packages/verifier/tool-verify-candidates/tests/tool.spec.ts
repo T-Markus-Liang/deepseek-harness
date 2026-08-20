@@ -33,8 +33,8 @@ class TestPersistence extends SessionPersistence {
     const entry = await this.inspect(id, signal)
     return { meta: entry.meta, events: entry.events.filter(event => event.seq >= fromSeq) }
   }
-  destroy(id: SessionIdType): Promise<void> { this.entries.delete(id); return Promise.resolve() }
-  relocate(): Promise<void> { return Promise.resolve() }
+  override remove(id: SessionIdType): Promise<void> { this.entries.delete(id); return Promise.resolve() }
+  override move(): Promise<void> { return Promise.resolve() }
   list(): Promise<SessionHeader[]> { return Promise.resolve([...this.entries.values()].map(item => item.meta)) }
   listSnapshots(): Promise<Array<{ header: SessionHeader; revision: SessionPersistenceRevision }>> {
     return Promise.resolve([...this.entries.values()].map(item => ({

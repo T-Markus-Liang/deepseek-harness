@@ -59,12 +59,12 @@ class TracePersistence extends SessionPersistence {
     return Promise.resolve()
   }
 
-  destroy(id: SessionIdType): Promise<void> {
+  override remove(id: SessionIdType): Promise<void> {
     TracePersistence.entries.delete(id)
     return Promise.resolve()
   }
 
-  relocate(_id: SessionIdType, _newCwd: string): Promise<void> {
+  override move(_id: SessionIdType, _newCwd: string): Promise<void> {
     return Promise.resolve()
   }
 

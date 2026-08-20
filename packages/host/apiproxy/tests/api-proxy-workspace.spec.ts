@@ -64,8 +64,11 @@ async function harness(
   extras: {
     openPath?: (path: string, signal: AbortSignal) => Promise<void>
     canOpenPath?: () => boolean
-    sessionPersistence?: { list: (signal?: AbortSignal) => Promise<unknown[]>; destroy?: (id: unknown) => Promise<void> }
-    sessionPersistenceAdmin?: { destroy?: (id: unknown) => Promise<void>; relocate?: (id: unknown, cwd: string) => Promise<void> }
+    sessionPersistence?: {
+      list: (signal?: AbortSignal) => Promise<unknown[]>
+      remove?: (id: unknown) => Promise<void>
+      move?: (id: unknown, cwd: string) => Promise<void>
+    }
   } = {},
 ) {
   const ctx = new Context()
@@ -77,10 +80,10 @@ async function harness(
   const storageDomain = new DomainFacility(ctx, { backend: 'memory', routes: {} })
   ctx.storage.mount('domain', storageDomain)
   ctx.provide('storageDomain', storageDomain)
-  ctx.provide('sessionPersistence', (extras.sessionPersistence ?? { list: () => Promise.resolve([]) }) as never)
-  if (extras.sessionPersistenceAdmin !== undefined) {
-    ctx.provide('sessionPersistenceAdmin', extras.sessionPersistenceAdmin as never)
-  }
+  const persistenceService = extras.sessionPersistence ?? { list: () => Promise.resolve([]) }
+  if (persistenceService.remove === undefined) persistenceService.remove = () => Promise.resolve()
+  if (persistenceService.move === undefined) persistenceService.move = () => Promise.resolve()
+  ctx.provide('sessionPersistence', persistenceService as never)
   await ctx.plugin(WorkspaceRegistry)
 
   const factory: AgentFactory = {
@@ -601,8 +604,7 @@ describe('workspace.deleteSession / workspace.moveSession', () => {
     const destroy = vi.fn(() => Promise.resolve())
     const headers: SessionHeader[] = []
     const { api, ctx } = await harness(root, undefined, {
-      sessionPersistence: persistence(headers),
-      sessionPersistenceAdmin: { destroy },
+      sessionPersistence: { ...persistence(headers), remove: destroy },
     })
     const workspace = expectOk(await api.workspace.create(request({ path: project }))).workspace
     // Creating through the API routes the handle into the proxy's retained
@@ -628,8 +630,7 @@ describe('workspace.deleteSession / workspace.moveSession', () => {
     const relocate = vi.fn(() => Promise.resolve())
     const headers: SessionHeader[] = []
     const { api, ctx } = await harness(root, undefined, {
-      sessionPersistence: persistence(headers),
-      sessionPersistenceAdmin: { relocate },
+      sessionPersistence: { ...persistence(headers), move: relocate },
     })
     const source = expectOk(await api.workspace.create(request({ path: sourcePath }))).workspace
     const target = expectOk(await api.workspace.create(request({ path: stageDir(root, 'target') }))).workspace
@@ -664,7 +665,7 @@ describe('workspace.deleteSession / workspace.moveSession', () => {
 
   it('rejects deleteSession for a session absent from persistence', async () => {
     const { api } = await harness(undefined, undefined, {
-      sessionPersistenceAdmin: { destroy: vi.fn(() => Promise.resolve()) },
+      sessionPersistence: { ...persistence([]), remove: vi.fn(() => Promise.resolve()) },
     })
     const res = await api.workspace.deleteSession(request({ sessionId: SessionId('session-ghost') }))
     expect(res.result).toMatchObject({
@@ -681,8 +682,7 @@ describe('workspace.deleteSession / workspace.moveSession', () => {
       { version: 0, id: sessionId, createdAt: 100, cwd: '/subagent', origin: 'subagent' } as SessionHeader,
     ]
     const { api } = await harness(root, undefined, {
-      sessionPersistence: persistence(headers),
-      sessionPersistenceAdmin: { destroy },
+      sessionPersistence: { ...persistence(headers), remove: destroy },
     })
     const res = await api.workspace.deleteSession(request({ sessionId }))
     expect(res.result).toMatchObject({ ok: false, error: { code: 'session-subagent' } })
@@ -696,8 +696,7 @@ describe('workspace.deleteSession / workspace.moveSession', () => {
       { version: 0, id: sessionId, createdAt: 100, cwd: '/source' } as SessionHeader,
     ]
     const { api } = await harness(root, undefined, {
-      sessionPersistence: persistence(headers),
-      sessionPersistenceAdmin: { relocate: vi.fn(() => Promise.resolve()) },
+      sessionPersistence: { ...persistence(headers), move: vi.fn(() => Promise.resolve()) },
     })
     const res = await api.workspace.moveSession(request({
       workspaceId: 'missing-workspace' as WorkspaceId,

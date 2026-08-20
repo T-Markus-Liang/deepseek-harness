@@ -194,6 +194,15 @@ function fakeApi(overrides: Partial<{ muxFrames: MuxFrame[]; hostFrames: HostFra
       async archiveSession(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { archivedSessionIds: [request.payload.sessionId] } } }
       },
+      async deleteSession(request) {
+        return { rpcId: request.rpcId, result: { ok: true, value: { sessionId: request.payload.sessionId } } }
+      },
+      async moveSession(request) {
+        return {
+          rpcId: request.rpcId,
+          result: { ok: true, value: { sessionId: request.payload.sessionId, workspaceId: request.payload.workspaceId } },
+        }
+      },
       async listTreeLevel(request) {
         return { rpcId: request.rpcId, result: { ok: true, value: { path: '', entries: [], truncated: false } } }
       },

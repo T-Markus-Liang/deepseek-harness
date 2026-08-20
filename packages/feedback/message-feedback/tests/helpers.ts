@@ -123,8 +123,8 @@ class TestPersistence extends SessionPersistence {
 
   locate(_meta: SessionHeader): SessionLocation | undefined { return undefined }
   create(_meta: SessionHeader): Promise<void> { return Promise.resolve() }
-  destroy(_id: SessionId): Promise<void> { return Promise.resolve() }
-  relocate(_id: SessionId, _newCwd: string): Promise<void> { return Promise.resolve() }
+  override remove(_id: SessionId): Promise<void> { return Promise.resolve() }
+  override move(_id: SessionId, _newCwd: string): Promise<void> { return Promise.resolve() }
   append(_id: SessionId, _events: readonly SessionEvent[]): Promise<void> { return Promise.resolve() }
 
   load(id: SessionId): Promise<SessionInspection> {

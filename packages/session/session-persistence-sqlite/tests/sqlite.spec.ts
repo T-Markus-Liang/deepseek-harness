@@ -411,28 +411,27 @@ describe('SessionPersistenceSqlite physical packing', () => {
   })
 })
 
-describe('SessionPersistenceSqlite admin destroy/relocate', () => {
-  it('registers the optional sessionPersistenceAdmin service', async () => {
+describe('SessionPersistenceSqlite session lifecycle', () => {
+  it('exposes lifecycle operations on the persistence service', async () => {
     const path = await freshDbPath()
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    expect(ctx.get('sessionPersistenceAdmin')).toBeDefined()
+    expect(ctx.sessionPersistence.remove).toBeDefined()
     await ctx.fiber.dispose()
   })
 
-  it('destroy removes the session row and every event row', async () => {
+  it('remove removes the session row and every event row', async () => {
     const path = await freshDbPath()
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    const header = meta('destroy-sqlite')
+    const header = meta('remove-sqlite')
     await ctx.sessionPersistence.create(header)
     await ctx.sessionPersistence.append(header.id, chunkLog(4))
     expect((await ctx.sessionPersistence.list()).map(h => h.id)).toContain(header.id)
 
-    const admin = ctx.get('sessionPersistenceAdmin')!
-    await admin.destroy(header.id)
+    await ctx.sessionPersistence.remove(header.id)
 
     expect((await ctx.sessionPersistence.list()).map(h => h.id)).not.toContain(header.id)
     await expect(ctx.sessionPersistence.inspect(header.id)).rejects.toThrow()
@@ -443,29 +442,27 @@ describe('SessionPersistenceSqlite admin destroy/relocate', () => {
     db.close()
   })
 
-  it('destroy is idempotent for an absent session', async () => {
+  it('remove is idempotent for an absent session', async () => {
     const path = await freshDbPath()
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    const admin = ctx.get('sessionPersistenceAdmin')!
-    await expect(admin.destroy(SessionId('absent'))).resolves.toBeUndefined()
+    await expect(ctx.sessionPersistence.remove(SessionId('absent'))).resolves.toBeUndefined()
     await ctx.fiber.dispose()
   })
 
-  it('relocate updates the stored cwd and bumps the revision', async () => {
+  it('move updates the stored cwd and bumps the revision', async () => {
     const path = await freshDbPath()
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    const header = meta('relocate-sqlite', '/work')
+    const header = meta('move-sqlite', '/work')
     await ctx.sessionPersistence.create(header)
     await ctx.sessionPersistence.append(header.id, chunkLog(2))
     const before = (await ctx.sessionPersistence.listSnapshots())
       .find(snapshot => snapshot.header.id === header.id)?.revision
 
-    const admin = ctx.get('sessionPersistenceAdmin')!
-    await admin.relocate(header.id, '/target')
+    await ctx.sessionPersistence.move(header.id, '/target')
 
     const loaded = await ctx.sessionPersistence.load(header.id)
     expect(loaded.meta.cwd).toBe('/target')
@@ -475,13 +472,12 @@ describe('SessionPersistenceSqlite admin destroy/relocate', () => {
     await ctx.fiber.dispose()
   })
 
-  it('relocate is idempotent for an absent session', async () => {
+  it('move is idempotent for an absent session', async () => {
     const path = await freshDbPath()
     const ctx = new Context()
     await ctx.plugin(SessionStore)
     await ctx.plugin(SessionPersistenceSqlite, { path })
-    const admin = ctx.get('sessionPersistenceAdmin')!
-    await expect(admin.relocate(SessionId('absent'), '/target')).resolves.toBeUndefined()
+    await expect(ctx.sessionPersistence.move(SessionId('absent'), '/target')).resolves.toBeUndefined()
     await ctx.fiber.dispose()
   })
 })

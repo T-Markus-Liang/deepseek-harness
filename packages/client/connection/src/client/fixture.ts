@@ -2809,6 +2809,8 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         }
         return ok(request, { archivedSessionIds: [...archivedSessionIds] })
       },
+      deleteSession: request => ok(request, { sessionId: request.payload.sessionId }),
+      moveSession: request => ok(request, { sessionId: request.payload.sessionId, workspaceId: request.payload.workspaceId }),
     },
     agentPresets: {
       // Both trusts appear, because a surface must present a locally authored
@@ -3225,6 +3227,8 @@ export class FixtureApiClient extends AbstractApiClient {
       case 'workspace.insertBefore': return this.api.workspace.insertBefore(request)
       case 'workspace.insertSessionBefore': return this.api.workspace.insertSessionBefore(request)
       case 'workspace.archiveSession': return this.api.workspace.archiveSession(request)
+      case 'workspace.deleteSession': return this.api.workspace.deleteSession(request)
+      case 'workspace.moveSession': return this.api.workspace.moveSession(request)
       case 'workspace.listTreeLevel': return this.api.workspace.listTreeLevel(request, signal)
       case 'workspace.readFilePreview': return this.api.workspace.readFilePreview(request, signal)
       case 'workspace.gitStatus': return this.api.workspace.gitStatus(request, signal)
