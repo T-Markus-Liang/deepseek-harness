@@ -2977,7 +2977,11 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             })
           }
         }
-        const header = (await ctx.sessionPersistence.list()).find(stored => stored.id === sessionId)
+        const persistence = ctx.get('sessionPersistence')
+        if (persistence === undefined) {
+          return err(request, { code: 'internal', message: 'session persistence service is unavailable', details: {} })
+        }
+        const header = (await persistence.list()).find(stored => stored.id === sessionId)
         if (header === undefined) {
           return err(request, {
             code: 'session-not-found',
@@ -2992,7 +2996,11 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             details: { sessionId },
           })
         }
-        await ctx.sessionPersistence.remove(sessionId)
+        const lifecycle = ctx.get('sessionLifecycle')
+        if (lifecycle === undefined) {
+          return err(request, { code: 'internal', message: 'session lifecycle service is unavailable', details: {} })
+        }
+        await lifecycle.remove(sessionId)
         await ctx.workspaceRegistry.unaccountSession(sessionId)
         return ok(request, { sessionId })
       },
@@ -3035,7 +3043,11 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         }
         const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(workspaceId))
         if (workspace === undefined) return workspaceNotFound(request, workspaceId)
-        const header = (await ctx.sessionPersistence.list()).find(stored => stored.id === sessionId)
+        const persistence = ctx.get('sessionPersistence')
+        if (persistence === undefined) {
+          return err(request, { code: 'internal', message: 'session persistence service is unavailable', details: {} })
+        }
+        const header = (await persistence.list()).find(stored => stored.id === sessionId)
         if (header === undefined) {
           return err(request, {
             code: 'session-not-found',

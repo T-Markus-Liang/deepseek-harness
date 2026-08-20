@@ -4,6 +4,18 @@
  * 通过 postMessage 向 iframe 传递用户手势，解除音频自动播放限制。
  * 背景音乐在父页面播放（FAB 点击 = 真实用户手势，Safari/Chrome 均允许自动播放；
  * iframe 内 AudioContext 在 Safari 下无法通过父页面手势解锁）。
+ *
+ * 可插拔配置（在加载本脚本前定义 window.DOUDIZHU_CONFIG）：
+ *   {
+ *     fabText: '🃏',          // FAB 按钮文字
+ *     fabTitle: '斗地主',      // FAB 悬浮提示
+ *     fabPosition: 'br',      // FAB 位置: br=右下 br2=右下(小) bl=左下 tr=右上 tl=左上
+ *     gameUrl: '/doudizhu.html',  // 游戏页面 URL（默认自动带时间戳防缓存）
+ *     bgmUrl: '/dou_dizhu_bgm.mp3',  // BGM URL
+ *     bgmVolume: 0.35,        // BGM 音量
+ *     autoBgm: true,          // 打开弹窗自动播放 BGM
+ *   }
+ * 全局 API：window.DoudizhuPlugin.open() / close() / toggle() / isOpen()
  */
 (function() {
   'use strict';
@@ -11,20 +23,31 @@
   if (window.__DOUDIZHU_INJECTED) return;
   window.__DOUDIZHU_INJECTED = true;
 
-  let modalOpen = false;
-  let modalEl = null;
-  let iframeEl = null;
-  let fabEl = null;
+  // ===== 配置（可被 window.DOUDIZHU_CONFIG 覆盖）=====
+  var CONFIG = Object.assign({
+    fabText: '🃏',
+    fabTitle: '斗地主',
+    fabPosition: 'br',            // br=右下, bl=左下, tr=右上, tl=左上
+    gameUrl: '/doudizhu.html',
+    bgmUrl: '/dou_dizhu_bgm.mp3',
+    bgmVolume: 0.35,
+    autoBgm: true
+  }, window.DOUDIZHU_CONFIG || {});
+
+  var modalOpen = false;
+  var modalEl = null;
+  var iframeEl = null;
+  var fabEl = null;
 
   // ===== 父页面 BGM 播放器（Safari 自动播放兼容）=====
-  let bgmAudio = null;       // HTMLAudioElement（父页面，FAB 手势解锁）
-  let bgmVol = 0.35;         // 音量
-  let bgmMutedByUser = false; // 用户手动静音（跨会话保留在父页面）
+  var bgmAudio = null;       // HTMLAudioElement（父页面，FAB 手势解锁）
+  var bgmVol = CONFIG.bgmVolume;
+  var bgmMutedByUser = false; // 用户手动静音（跨会话保留在父页面）
 
   function bgmInit() {
     if (bgmAudio) return;
     try {
-      bgmAudio = new Audio('/dou_dizhu_bgm.mp3');
+      bgmAudio = new Audio(CONFIG.bgmUrl);
       bgmAudio.loop = true;
       bgmAudio.volume = bgmVol;
       bgmAudio.preload = 'auto';
@@ -100,11 +123,25 @@
 
   function createStyles() {
     const style = document.createElement('style');
+    // FAB 位置配置
+    const pos = {
+      br: 'bottom: 24px; right: 24px;',
+      br2: 'bottom: 16px; right: 16px;',
+      bl: 'bottom: 24px; left: 24px;',
+      tr: 'top: 24px; right: 24px;',
+      tl: 'top: 24px; left: 24px;'
+    }[CONFIG.fabPosition] || 'bottom: 24px; right: 24px;';
+    const posSmall = {
+      br: 'bottom: 16px; right: 16px;',
+      br2: 'bottom: 8px; right: 8px;',
+      bl: 'bottom: 16px; left: 16px;',
+      tr: 'top: 16px; right: 16px;',
+      tl: 'top: 16px; left: 16px;'
+    }[CONFIG.fabPosition] || 'bottom: 16px; right: 16px;';
     style.textContent = `
       #doudizhu-fab {
         position: fixed;
-        bottom: 24px;
-        right: 24px;
+        ${pos}
         width: 56px;
         height: 56px;
         border-radius: 50%;
@@ -179,8 +216,7 @@
       }
       @media (max-width: 768px) {
         #doudizhu-fab {
-          bottom: 16px;
-          right: 16px;
+          ${posSmall}
           width: 48px;
           height: 48px;
           font-size: 24px;
@@ -201,8 +237,8 @@
     if (fabEl) return;
     fabEl = document.createElement('button');
     fabEl.id = 'doudizhu-fab';
-    fabEl.textContent = '🃏';
-    fabEl.title = '斗地主';
+    fabEl.textContent = CONFIG.fabText;
+    fabEl.title = CONFIG.fabTitle;
     fabEl.addEventListener('click', openModal);
     document.body.appendChild(fabEl);
   }
@@ -222,8 +258,9 @@
 
     iframeEl = document.createElement('iframe');
     iframeEl.id = 'doudizhu-iframe';
-    iframeEl.src = '/doudizhu.html?_t=' + Date.now();
-    iframeEl.title = '斗地主';
+    // 带时间戳防缓存（部署更新后强制加载新版）
+    iframeEl.src = CONFIG.gameUrl + (CONFIG.gameUrl.indexOf('?') >= 0 ? '&' : '?') + '_t=' + Date.now();
+    iframeEl.title = CONFIG.fabTitle;
     iframeEl.allow = 'autoplay; fullscreen';
     modalEl.appendChild(iframeEl);
 
@@ -260,7 +297,7 @@
     modalEl.classList.add('open');
     document.body.style.overflow = 'hidden';
     // 在用户手势调用栈内启动 BGM（父页面 AudioContext/audio 元素，Safari 也允许）
-    bgmStart();
+    if (CONFIG.autoBgm) bgmStart();
   }
 
   function closeModal() {
@@ -277,6 +314,18 @@
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && modalOpen) closeModal();
   });
+
+  // ===== 全局 API（供外部控制/调试）=====
+  window.DoudizhuPlugin = {
+    open: openModal,
+    close: closeModal,
+    toggle: function() { modalOpen ? closeModal() : openModal(); },
+    isOpen: function() { return modalOpen; },
+    getConfig: function() { return Object.assign({}, CONFIG); },
+    bgmStart: bgmStart,
+    bgmStop: bgmStop,
+    bgmToggle: bgmToggle
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
