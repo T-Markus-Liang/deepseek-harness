@@ -4,10 +4,14 @@ English | [中文](index.zh.md)
 
 ## Active
 
-- None.
+- [2026-08-20 13:00 - Restore local session lifecycle](active/2026-08-20_1300_restore-session-lifecycle.md)
 
 ## Completed
 
+- [2026-08-20 12:40 - Remove FCC-derived LLM module](completed/2026-08-20_1240_remove-fcc-llm-module.md)
+- [2026-08-20 12:05 - Design FCC-derived free-provider router](completed/2026-08-20_1205_design-free-provider-router.md)
+- [2026-08-20 11:35 - Compare LLM adapters](completed/2026-08-20_1135_compare-llm-adapters.md)
+- [2026-08-20 11:10 - Fix local web service](completed/2026-08-20_1110_fix-web-service.md)
 - [2026-08-18 21:16 - Prepare isolated subscriptions Codex pilot](completed/2026-08-18_2116_prepare-subscriptions-codex-pilot.md)
 - [2026-08-18 19:49 - Implement LLM-as-a-Verifier integration](completed/2026-08-18_1949_implement-llm-verifier.md)
 - [2026-08-18 19:45 - Audit dsh-plugin-subscriptions](completed/2026-08-18_1945_audit-subscriptions-plugin.md)
