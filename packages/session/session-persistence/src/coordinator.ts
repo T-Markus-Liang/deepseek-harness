@@ -193,22 +193,6 @@ export interface PersistenceBackend<TornMarker = unknown> {
   commitRepair(meta: SessionHeader, tornMarker: TornMarker | undefined, closers: readonly SessionEvent[]): Promise<void>
 
   /**
-   * Physically delete every durable artifact for one stored session. Idempotent:
-   * destroying an id with no stored artifact succeeds silently.
-   * @param id - persisted session id whose artifacts are deleted.
-   */
-  destroy(id: SessionId): Promise<void>
-
-  /**
-   * Relocate a stored session to a new project directory by rewriting its
-   * header `cwd` and moving the durable artifact to the path derived from
-   * `newCwd`. Idempotent: an id with no stored artifact resolves silently.
-   * @param id - persisted session id to relocate.
-   * @param newCwd - absolute path of the new project directory.
-   */
-  relocate(id: SessionId, newCwd: string): Promise<void>
-
-  /**
    * List all stored (materialized) sessions' metadata.
    * @param signal - optional cancellation for backend listing work.
    */
@@ -671,60 +655,6 @@ export class PersistenceCoordinator<TornMarker = unknown> {
     }
     // Pure lazy: record intent only. No artifact until the first append.
     this.states.set(meta.id, { meta, cursor: 0, materialized: false })
-  }
-
-  /**
-   * Physically delete every durable artifact for a session and release all
-   * in-memory bookkeeping for it. Idempotent: an id with neither an artifact
-   * nor tracked state destroys to a silent success. Rejects while the id is
-   * live or carries in-memory persistence state — a live session keeps writing
-   * to its id and a tracked state owns a cursor the backend no longer matches.
-   * @param id - persisted session id whose artifacts are deleted.
-   */
-  destroy(id: SessionId): Promise<void> {
-    if (this.ctx.sessions.get(id) !== undefined) {
-      return Promise.reject(new Error(`cannot destroy session "${id}" while it is live`))
-    }
-    if (this.states.has(id) || this.retirements.has(id) || this.preparations.has(id)) {
-      return Promise.reject(new Error(`cannot destroy session "${id}" while it has in-memory persistence state`))
-    }
-    return this.serialize(id, () => this.destroyCore(id))
-  }
-
-  /** Delete durable artifacts and every in-memory trace of one session. */
-  private async destroyCore(id: SessionId): Promise<void> {
-    await this.backend.destroy(id)
-    this.states.delete(id)
-    this.retirements.delete(id)
-    this.preparations.invalidate(id)
-  }
-
-  /**
-   * Relocate a stored session to a new project directory by rewriting its
-   * header `cwd` and moving the durable artifact to the path derived from
-   * `newCwd`. Idempotent: an id with neither an artifact nor tracked state
-   * relocates to a silent success. Rejects while the id is live or carries
-   * in-memory persistence state — a live session keeps writing to its id and
-   * a tracked state owns a cursor the backend no longer matches.
-   * @param id - persisted session id to relocate.
-   * @param newCwd - absolute path of the new project directory.
-   */
-  relocate(id: SessionId, newCwd: string): Promise<void> {
-    if (this.ctx.sessions.get(id) !== undefined) {
-      return Promise.reject(new Error(`cannot relocate session "${id}" while it is live`))
-    }
-    if (this.states.has(id) || this.retirements.has(id) || this.preparations.has(id)) {
-      return Promise.reject(new Error(`cannot relocate session "${id}" while it has in-memory persistence state`))
-    }
-    return this.serialize(id, () => this.relocateCore(id, newCwd))
-  }
-
-  /** Move durable artifacts to the new project directory and reset in-memory traces. */
-  private async relocateCore(id: SessionId, newCwd: string): Promise<void> {
-    await this.backend.relocate(id, newCwd)
-    this.states.delete(id)
-    this.retirements.delete(id)
-    this.preparations.invalidate(id)
   }
 
   // `async` so synchronous materialization failures below reject (not throw) per
@@ -1240,7 +1170,8 @@ export class PersistenceCoordinator<TornMarker = unknown> {
       this.live.set(session, restored)
       return restored
     }
-    const seed = session.events.map(e => structuredClone(e))
+    // Session owns this stable deep-frozen snapshot; backends only serialize it.
+    const seed = session.events
     const live: LiveSessionState = {
       init: Promise.resolve(),
       writes: this.createWriteBehind(session, () => live.init),

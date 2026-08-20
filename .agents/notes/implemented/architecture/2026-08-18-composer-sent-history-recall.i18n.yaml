@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-18-composer-sent-history-recall.md
+2026-08-18-composer-sent-history-recall.md: 913d183734bb65a9e5a09e06c811510eba7f4380
+2026-08-18-composer-sent-history-recall.zh.md: 79ba1424a09d460caa76b2e141ebc40d4f7947e3

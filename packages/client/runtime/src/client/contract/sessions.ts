@@ -96,16 +96,6 @@ export interface ISessions {
    */
   fork(opts: { sessionId: SessionId; atSeq?: number; increaseTitle?: boolean }): Promise<SessionId>
   /**
-   * Permanently delete one cold session: the host destroys its persisted
-   * artifacts and drops every workspace accounting and archive entry; on
-   * success the local echo removes its list row and clears a stale selection.
-   * A live session fails host-side with `session-live`, a subagent-origin one
-   * with `session-subagent`, and an unknown id with `session-not-found`.
-   * @param sessionId - session to delete.
-   * @throws when the host rejects the deletion.
-   */
-  deleteSession(sessionId: SessionId): Promise<void>
-  /**
    * Register a per-session standard-props provider (hooks become `use<Name>`
    * selector hooks on the render side; props spread verbatim).
    * @param descriptor - static member roster plus per-session resolver.

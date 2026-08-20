@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](2026-08-19-session-delete-move-stop-live-agent.zh.md)
+[English](2026-08-19-session-delete-move-stop-live-agent.md) | 中文
 
 ## 问题
 

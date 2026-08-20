@@ -595,58 +595,6 @@ describe('fork', () => {
 })
 
 describe('delete', () => {
-  it('removes the row from the list store and clears a stale selection on success', async () => {
-    const b = bench()
-    await feedList(b, [{ id: 's1' }, { id: 's2' }])
-    b.svc.open(sid('s1'))
-    expect(b.svc.list.getSnapshot().current).toBe('s1')
-
-    await b.svc.deleteSession(sid('s1'))
-
-    expect(b.api.callsOf('workspace.deleteSession')).toEqual([{ sessionId: 's1' }])
-    const state = b.svc.list.getSnapshot()
-    expect(state.ids).toEqual(['s2'])
-    expect(state.byId[sid('s1')]).toBeUndefined()
-    expect(state.current).toBeUndefined()
-  })
-
-  it('removes a never-opened, non-selected row without touching the selection', async () => {
-    const b = bench()
-    await feedList(b, [{ id: 's1' }, { id: 's2' }])
-    b.svc.open(sid('s1')) // s2 stays unopened and unselected
-
-    await b.svc.deleteSession(sid('s2'))
-
-    const state = b.svc.list.getSnapshot()
-    expect(state.ids).toEqual(['s1'])
-    expect(state.byId[sid('s2')]).toBeUndefined()
-    expect(state.current).toBe('s1')
-  })
-
-  it('rejects a host business error without removing the row', async () => {
-    const b = bench()
-    await feedList(b, [{ id: 's1' }])
-    b.api.onWorkspaceDeleteSession = () => Promise.resolve(err({
-      code: 'session-live', message: 'session has a live agent', details: { sessionId: sid('s1') },
-    }))
-
-    await expect(b.svc.deleteSession(sid('s1')))
-      .rejects.toThrow('session delete failed: session-live: session has a live agent')
-    expect(b.api.callsOf('workspace.deleteSession')).toEqual([{ sessionId: 's1' }])
-    expect(b.svc.list.getSnapshot().ids).toEqual(['s1'])
-  })
-
-  it('maps a transport failure to the internal-code message', async () => {
-    const b = bench()
-    await feedList(b, [{ id: 's1' }])
-    b.api.onWorkspaceDeleteSession = () => { throw new Error('carrier broke') }
-
-    await expect(b.svc.deleteSession(sid('s1'))).rejects.toThrow('session delete failed: internal: carrier broke')
-    expect(b.svc.list.getSnapshot().ids).toEqual(['s1'])
-  })
-})
-
-describe('scope lifecycle rides the list mirror (entity parity: no client-side pre-birth)', () => {
   it('a session-added frame births the row (blank) and makes the scope resolvable; removal prunes it', async () => {
     const b = bench()
     await feedList(b, [])

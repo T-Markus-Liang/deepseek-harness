@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-08-18-composer-sent-history-recall.zh.md)
+
 ## Problem
 
 Users expect the composer input box to recall previously sent messages with the ↑/↓ arrow keys, terminal-style: pressing ↑ in a fresh draft fills the newest sent message, further ↑ walks older, and ↓ walks forward again to the draft. Without it, re-sending a similar message means retyping or copying it from the transcript.

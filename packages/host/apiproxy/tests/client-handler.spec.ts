@@ -73,7 +73,7 @@ function scriptedApi(overrides: {
     },
     host: {
       describe: r => ok(r, {
-        version: '0-test', cwd: '/t', attachedSessions: 0, canOpenPath: true,
+        version: '0-test', cwd: '/t', attachedSessions: 0, home: '/h', canOpenPath: true,
       }),
       pickDirectory: r => ok(r, { path: null }),
       listDirectory: r => ok(r, { path: '/t', home: '/t', crumbs: [], entries: [], truncated: false }),
@@ -89,8 +89,6 @@ function scriptedApi(overrides: {
       insertBefore: r => ok(r, { workspaceIds: [r.payload.workspaceId] }),
       insertSessionBefore: r => ok(r, { workspace: { workspaceId: 'w1' as never, path: '/t', title: 't', sessionIds: [], createdAt: '0', updatedAt: '0' } }),
       archiveSession: r => ok(r, { archivedSessionIds: [r.payload.sessionId] }),
-      deleteSession: r => ok(r, { sessionId: r.payload.sessionId }),
-      moveSession: r => ok(r, { sessionId: r.payload.sessionId, workspaceId: r.payload.workspaceId }),
       listTreeLevel: r => ok(r, { path: '', entries: [], truncated: false }),
       readFilePreview: r => ok(r, { path: '', text: '', totalBytes: 0 }),
       gitStatus: r => ok(r, { branch: 'main', ahead: 0, behind: 0, files: [], truncated: false }),

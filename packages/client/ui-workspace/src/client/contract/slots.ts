@@ -22,7 +22,8 @@
  * and a hole has exactly one declaring entry — they carry the same owner
  * contract and the same occupant.
  */
-import type { HostObservable, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
+import type { HostDescriptionSource } from '@deepseek-ai/dsh-client-connection/client'
+import type { HostObservable, PropsHooks, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: pull the owner SlotMap merges into programs that resolve the
 // runtime shares below.
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -86,17 +87,18 @@ export type DirectoryPickingInjected = {
 }
 
 /** Component-side view of the picking share: the bound occupancy selector hook. */
-export type DirectoryPickingHooks = {
-  /** Selector hook over this surface's directory-flow occupancy. */
-  useDirectoryFlow: SnapshotSelectorHook<boolean>
-}
+export type DirectoryPickingHooks = PropsHooks<DirectoryPickingInjected['hooks']>
 
 /**
  * Browser-private injected share (arrives via the register inject factory).
  * Data reads use the global framework hooks; these are the Host actions the
  * browsing region drives.
  */
-export type WorkspaceBrowserInjected = DirectoryPickingInjected & {
+export type WorkspaceBrowserInjected = {
+  hooks: DirectoryPickingInjected['hooks'] & {
+    /** Current generation's Host description, bound by the slot renderer. */
+    hostDescription: HostDescriptionSource
+  }
   /**
    * Start a New Session in a Workspace: reuse-or-create its blank session and
    * open it; without an explicit workspace, inherit the current Session
@@ -135,13 +137,6 @@ export type WorkspaceBrowserInjected = DirectoryPickingInjected & {
    */
   archiveSession: (sessionId: SessionId) => Promise<void>
   /**
-   * Permanently delete one cold Session: the host destroys its persisted log
-   * and drops every workspace account and archive entry. The host rejects a
-   * live session (`session-live`), a subagent-origin one (`session-subagent`),
-   * and an unknown id (`session-not-found`). The operation is irreversible.
-   */
-  deleteSession: (sessionId: SessionId) => Promise<void>
-  /**
    * Reorder a session inside its Workspace account (DOM-insertBefore
    * semantics: omitted anchor appends to the end). The view refreshes from
    * the Host response/changed frame; failures leave the order unchanged.
@@ -157,7 +152,7 @@ export type WorkspaceBrowserProps =
   & PropsRenderSlots<'sidebar.workspaces.directoryFlow' | 'sidebar.workspaces.files' | 'sidebar.workspaces.changes'>
   & PropsStore<ReturnType<typeof createWorkspaceViewStore>>
   & Omit<WorkspaceBrowserInjected, 'hooks'>
-  & DirectoryPickingHooks
+  & PropsHooks<WorkspaceBrowserInjected['hooks']>
   & PropsLocale<'workspace'>
 
 /**

@@ -5,12 +5,13 @@
 
 import { randomUUID } from 'node:crypto'
 import { mkdir, stat } from 'node:fs/promises'
+import { homedir } from 'node:os'
 import { dirname } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { installModelSelection } from '@deepseek-ai/dsh-agent'
 import type { Agent, AgentHandle, ModelSelection, ModelSelectionRef, AgentOptions, AgentStatus } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-presets/types'
-import { AttachmentError } from '@deepseek-ai/dsh-attachment'
+import { AttachmentError, admitEncodedImages } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { contentHasImage, createUserMessage, freezeMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import { errorChain } from '@deepseek-ai/dsh-llm'
@@ -125,42 +126,17 @@ export const DEFAULT_COLD_BLANK_PROBE_MAX_BYTES = 1024
 /** Conversation message event types (the pagination counting unit). */
 const MESSAGE_TYPES = new Set(['user/message', 'assistant/message'])
 
-/** Decode the browser payload while rejecting non-canonical base64 forms. */
-function decodeBase64(data: string): Uint8Array {
-  const decoded = Buffer.from(data, 'base64')
-  if (data.length === 0 || decoded.toString('base64') !== data) {
-    throw new AttachmentError('Image upload is not canonical base64.', 'INVALID_IMAGE_BASE64')
-  }
-  return new Uint8Array(decoded)
-}
-
 /** Validate one prompt as a batch before publishing any durable image object. */
 async function durablePromptContent(ctx: Context, content: readonly PromptContentPart[]): Promise<ContentBlock[]> {
   if (content.every(part => part.type === 'text')) {
     return content.map(part => ({ type: 'text', text: part.text }))
   }
-  const prepared = content.map(part => part.type === 'text'
-    ? part
-    : { part, data: decodeBase64(part.data) })
-  const images = prepared.filter((part): part is Extract<typeof part, { data: Uint8Array }> => 'data' in part)
-  const refs = await ctx.attachments.saveImages(images.map(image => ({
-    data: image.data,
-    mediaType: image.part.mediaType,
-    ...image.part.name === undefined ? {} : { name: image.part.name },
-  })))
-  const blocks: ContentBlock[] = []
-  let imageIndex = 0
-  for (const item of prepared) {
-    if (!('data' in item)) {
-      blocks.push({ type: 'text', text: item.text })
-      continue
-    }
-    const attachment = refs[imageIndex++]
-    /* v8 ignore next -- each prepared image supplied exactly one saveImages input and therefore one ordered ref. */
-    if (attachment === undefined) throw new Error('attachment batch result did not preserve input cardinality')
-    blocks.push({ type: 'image', attachment })
-  }
-  return blocks
+  const refs = await admitEncodedImages(ctx.attachments, content.filter(part => part.type === 'image'))
+  let next = 0
+  return content.map(part => part.type === 'text'
+    ? { type: 'text', text: part.text }
+    // admitEncodedImages returns one reference per image part in order.
+    : { type: 'image', attachment: refs[next++] as ImageAttachmentRef })
 }
 
 /** Search durable content for an image reference, including nested tool results. */
@@ -2958,117 +2934,6 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         return ok(request, { archivedSessionIds: [...ctx.workspaceRegistry.archivedSessionIds] })
       },
 
-      async deleteSession(request) {
-        const { sessionId } = request.payload
-        if (ctx.sessions.get(sessionId) !== undefined) {
-          // A live agent blocks a destructive delete; dispose it first so the
-          // conversation can be removed. Only agents this proxy owns have a
-          // retained handle (the same set session.stop can release); live
-          // agents without one keep the session-live guard.
-          const handle = agentHandles.get(sessionId)
-          if (handle !== undefined) {
-            try {
-              await handle.dispose()
-            } catch (error: unknown) {
-              return err(request, {
-                code: 'internal',
-                message: `failed to stop session "${sessionId}": ${String(error)}`,
-                details: { sessionId },
-              })
-            }
-          }
-          if (ctx.sessions.get(sessionId) !== undefined) {
-            return err(request, {
-              code: 'session-live',
-              message: `session "${sessionId}" has a live agent`,
-              details: { sessionId },
-            })
-          }
-        }
-        const persistence = ctx.get('sessionPersistence')
-        if (persistence === undefined) {
-          return err(request, { code: 'internal', message: 'session persistence is unavailable', details: {} })
-        }
-        const header = (await persistence.list()).find(stored => stored.id === sessionId)
-        if (header === undefined) {
-          return err(request, {
-            code: 'session-not-found',
-            message: `session "${sessionId}" is not in persistence`,
-            details: { sessionId },
-          })
-        }
-        if (header.origin === 'subagent') {
-          return err(request, {
-            code: 'session-subagent',
-            message: `session "${sessionId}" belongs to a subagent`,
-            details: { sessionId },
-          })
-        }
-        await persistence.destroy(sessionId)
-        await ctx.workspaceRegistry.unaccountSession(sessionId)
-        return ok(request, { sessionId })
-      },
-
-      async moveSession(request) {
-        const { workspaceId, sessionId } = request.payload
-        if (ctx.sessions.get(sessionId) !== undefined) {
-          // Relocating a live session first disposes its agent: the session's
-          // file operations and log writes are anchored to the old cwd, so
-          // the agent must be gone before the header is rewritten. Only
-          // proxy-owned agents have a retained handle; live agents without
-          // one keep the session-live guard.
-          const handle = agentHandles.get(sessionId)
-          if (handle !== undefined) {
-            try {
-              await handle.dispose()
-            } catch (error: unknown) {
-              return err(request, {
-                code: 'internal',
-                message: `failed to stop session "${sessionId}": ${String(error)}`,
-                details: { sessionId },
-              })
-            }
-          }
-          if (ctx.sessions.get(sessionId) !== undefined) {
-            return err(request, {
-              code: 'session-live',
-              message: `session "${sessionId}" has a live agent`,
-              details: { sessionId },
-            })
-          }
-        }
-        const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(workspaceId))
-        if (workspace === undefined) return workspaceNotFound(request, workspaceId)
-        const persistence = ctx.get('sessionPersistence')
-        if (persistence === undefined) {
-          return err(request, { code: 'internal', message: 'session persistence is unavailable', details: {} })
-        }
-        const header = (await persistence.list()).find(stored => stored.id === sessionId)
-        if (header === undefined) {
-          return err(request, {
-            code: 'session-not-found',
-            message: `session "${sessionId}" is not in persistence`,
-            details: { sessionId },
-          })
-        }
-        if (header.origin === 'subagent') {
-          return err(request, {
-            code: 'session-subagent',
-            message: `session "${sessionId}" belongs to a subagent`,
-            details: { sessionId },
-          })
-        }
-        try {
-          await ctx.workspaceRegistry.moveSession(sessionId, brandWorkspaceId(workspaceId))
-        } catch (error: unknown) {
-          return err(request, {
-            code: 'internal',
-            message: `failed to move session "${sessionId}": ${String(error)}`,
-            details: {},
-          })
-        }
-        return ok(request, { sessionId, workspaceId })
-      },
     },
 
     host: {
@@ -3085,6 +2950,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
           provider: selection.provider,
           model: selection.model,
           attachedSessions: ctx.agents.list().length,
+          home: homedir(),
           canOpenPath: canOpenPaths(),
         }))
       },

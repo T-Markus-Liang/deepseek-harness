@@ -1,12 +1,11 @@
 import { existsSync, mkdirSync, mkdtempSync, realpathSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import AgentRegistry, { Inbox } from '@deepseek-ai/dsh-agent'
 import type { Agent, AgentFactory } from '@deepseek-ai/dsh-agent'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionHeader } from '@deepseek-ai/dsh-session'
 import type { Session } from '@deepseek-ai/dsh-session'
 import Storage from '@deepseek-ai/dsh-storage'
 import { DomainFacility } from '@deepseek-ai/dsh-storage-domain'
@@ -87,8 +86,8 @@ async function harness(
         options.meta === undefined ? {} : { meta: options.meta },
       )
       // Mirror the loop's publish/dispose pair so an agent stop also detaches
-      // the session, matching production (deleteSession/moveSession stop the
-      // live agent and then require the session store entry to be gone).
+      // the session, matching production (a stopped live agent requires the
+      // session store entry to be gone).
       const detachSession = ctx.sessions.enter(session)
       ctx.sessions.announce(session)
       const agent = stubAgent(session)
@@ -242,6 +241,7 @@ describe('host.openPath', () => {
     const headless = await harness(undefined, undefined, { canOpenPath: () => false })
     expect(expectOk(await visible.api.host.describe(request({}))).canOpenPath).toBe(true)
     expect(expectOk(await headless.api.host.describe(request({}))).canOpenPath).toBe(false)
+    expect(expectOk(await visible.api.host.describe(request({}))).home).toBe(homedir())
   })
 
   it('opens through the injected native boundary', async () => {
@@ -574,83 +574,5 @@ describe('Host Workspace increments', () => {
       error: { code: 'session-not-found', details: { sessionId: 'session-ghost' } },
     })
     abort.abort()
-  })
-})
-
-describe('session delete and move stop live agents first', () => {
-  // A mutable header list so a test can create the live session with an empty
-  // persistence (pure create, not resume) and only then expose the header for
-  // the delete/move persistence reads.
-  function persistence(destroy = vi.fn(() => Promise.resolve())) {
-    const headers: SessionHeader[] = []
-    return {
-      list: () => Promise.resolve([...headers]),
-      inspect: (id: SessionId) => {
-        const meta = headers.find(entry => entry.id === id)
-        return Promise.resolve(meta === undefined ? { meta: { version: 0, id, createdAt: 0, cwd: '/' } as SessionHeader, events: [] as SessionEvent[] } : { meta, events: [] as SessionEvent[] })
-      },
-      destroy,
-      locate: () => undefined,
-      headers,
-    }
-  }
-
-  it('deleteSession stops a tracked live agent, then destroys persistence', async () => {
-    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dsh-apiproxy-workspace-')))
-    const sessionId = SessionId('session-delete-live')
-    const project = stageDir(root, 'project')
-    const destroy = vi.fn(() => Promise.resolve())
-    const p = persistence(destroy)
-    const { api, ctx } = await harness(root, undefined, { sessionPersistence: p })
-    const workspace = expectOk(await api.workspace.create(request({ path: project }))).workspace
-    // Creating through the API routes the handle into the proxy's retained
-    // agentHandles map (the same set session.stop can release).
-    expectOk(await api.sessions.create(request({ workspaceId: workspace.workspaceId, sessionId })))
-    expect(ctx.sessions.get(sessionId)).toBeDefined()
-    expect(ctx.agents.get(sessionId)).toBeDefined()
-    // Only now expose the persisted header so deleteSession can find it.
-    p.headers.push({ version: 0, id: sessionId, createdAt: 100, cwd: project } as SessionHeader)
-
-    const res = await api.workspace.deleteSession(request({ sessionId }))
-    expectOk(res)
-    expect(destroy).toHaveBeenCalledWith(sessionId)
-    // the agent and its session were both stopped
-    expect(ctx.agents.get(sessionId)).toBeUndefined()
-    expect(ctx.sessions.get(sessionId)).toBeUndefined()
-  })
-
-  it('moveSession stops a tracked live agent, then relocates the session', async () => {
-    const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dsh-apiproxy-workspace-')))
-    const sessionId = SessionId('session-move-live')
-    const sourcePath = stageDir(root, 'source')
-    const p = persistence()
-    const { api, ctx } = await harness(root, undefined, { sessionPersistence: p })
-    const source = expectOk(await api.workspace.create(request({ path: sourcePath }))).workspace
-    const target = expectOk(await api.workspace.create(request({ path: stageDir(root, 'target') }))).workspace
-    expectOk(await api.sessions.create(request({ workspaceId: source.workspaceId, sessionId })))
-    expect(ctx.sessions.get(sessionId)).toBeDefined()
-    p.headers.push({ version: 0, id: sessionId, createdAt: 100, cwd: sourcePath } as SessionHeader)
-    const relocate = vi.spyOn(ctx.workspaceRegistry, 'moveSession').mockResolvedValue()
-
-    const res = await api.workspace.moveSession(request({ workspaceId: target.workspaceId, sessionId }))
-    expectOk(res)
-    expect(relocate).toHaveBeenCalledWith(sessionId, target.workspaceId)
-    // the live agent was stopped so relocation could proceed
-    expect(ctx.agents.get(sessionId)).toBeUndefined()
-    expect(ctx.sessions.get(sessionId)).toBeUndefined()
-  })
-
-  it('keeps session-live when the live agent has no tracked handle', async () => {
-    const { api, ctx, root } = await harness()
-    const workspace = expectOk(await api.workspace.create(request({ path: stageDir(root, 'project') }))).workspace
-    const sessionId = SessionId('session-live-untracked')
-    // A session attached without going through create/resume has no tracked
-    // handle: stop() cannot dispose it, so the destructive guard stays.
-    const session = ctx.sessions.create(sessionId, { meta: { cwd: workspace.path } })
-    ctx.agents.register(stubAgent(session))
-
-    const res = await api.workspace.deleteSession(request({ sessionId }))
-    expect(res.result).toMatchObject({ ok: false, error: { code: 'session-live' } })
-    expect(ctx.sessions.get(sessionId)).toBeDefined()
   })
 })

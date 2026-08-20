@@ -532,18 +532,6 @@ export class SessionRuntime implements ISessions {
   }
 
   /**
-   * Permanently delete one cold session (the contract documents the host
-   * rejection codes). The local row removal happens inside the manager; the
-   * projection republishes afterward.
-   * @param sessionId - session to delete.
-   */
-  async deleteSession(sessionId: SessionId): Promise<void> {
-    const result = await this.manager.deleteSession(sessionId)
-    if (!result.ok) throw new Error(`session delete failed: ${result.error.code}: ${result.error.message}`)
-    this.projectList()
-  }
-
-  /**
    * Resolve an Agent-scoped context view (use-and-discard).
    * @param id - session id (the agent identity — 1:1 same axis).
    * @returns scoped ctx, or undefined for a session neither listed nor already scoped.

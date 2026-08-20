@@ -99,27 +99,6 @@ export const workspaceArchiveSessionValueSchema = z.object({
   archivedSessionIds: z.array(sessionIdSchema),
 }) satisfies z.ZodType<Wire<ResponseValue<'workspace.archiveSession'>>>
 
-/** workspace.deleteSession request payload. */
-export const workspaceDeleteSessionRequestSchema = z.object({
-  sessionId: sessionIdSchema,
-}) satisfies z.ZodType<Wire<RequestPayload<'workspace.deleteSession'>>>
-
-/** workspace.deleteSession response value. */
-export const workspaceDeleteSessionValueSchema = z.object({
-  sessionId: sessionIdSchema,
-}) satisfies z.ZodType<Wire<ResponseValue<'workspace.deleteSession'>>>
-
-/** workspace.moveSession request payload. */
-export const workspaceMoveSessionRequestSchema = z.object({
-  workspaceId: workspaceIdSchema,
-  sessionId: sessionIdSchema,
-}) satisfies z.ZodType<Wire<RequestPayload<'workspace.moveSession'>>>
-
-/** workspace.moveSession response value. */
-export const workspaceMoveSessionValueSchema = z.object({
-  sessionId: sessionIdSchema,
-  workspaceId: workspaceIdSchema,
-}) satisfies z.ZodType<Wire<ResponseValue<'workspace.moveSession'>>>
 const treeEntrySchema = z.object({ path: z.string(), name: z.string(), type: z.enum(['file', 'directory', 'other']), size: z.number().optional(), hidden: z.boolean() })
 /** workspace.listTreeLevel request: workspace id plus the optional relative directory. */
 export const workspaceListTreeLevelRequestSchema = z.object({ workspaceId: workspaceIdSchema, path: z.string().optional() }) satisfies z.ZodType<Wire<RequestPayload<'workspace.listTreeLevel'>>>

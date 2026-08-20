@@ -1,5 +1,7 @@
 # 🃏 斗地主（DSH Web GUI 插件）
 
+English | [中文](README.zh.md)
+
 前端 AI 斗地主，作为 DeepSeek Harness Web GUI 插件运行：🃏 FAB 按钮 → 弹窗 → iframe 加载 `/doudizhu.html`。
 
 ## 功能特性
