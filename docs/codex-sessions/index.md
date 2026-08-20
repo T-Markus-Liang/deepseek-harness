@@ -4,9 +4,11 @@ English | [中文](index.zh.md)
 
 ## Active
 
-- [2026-08-20 13:00 - Restore local session lifecycle](active/2026-08-20_1300_restore-session-lifecycle.md)
+- None.
 
 ## Completed
+
+- [2026-08-20 13:00 - Restore local session lifecycle](completed/2026-08-20_1300_restore-session-lifecycle.md)
 
 - [2026-08-20 12:40 - Remove FCC-derived LLM module](completed/2026-08-20_1240_remove-fcc-llm-module.md)
 - [2026-08-20 12:05 - Design FCC-derived free-provider router](completed/2026-08-20_1205_design-free-provider-router.md)
