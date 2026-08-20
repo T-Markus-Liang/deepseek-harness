@@ -11,6 +11,7 @@ const SQL_RESOURCES = [
   'begin-immediate',
   'commit',
   'delete-events-from',
+  'delete-session',
   'foreign-keys-on',
   'insert-event',
   'insert-persistence-state',
@@ -39,6 +40,7 @@ const SQL_RESOURCES = [
   'set-user-version-17',
   'synchronous-full',
   'trusted-schema-off',
+  'update-session-cwd',
   'update-session-revision',
   'upsert-session',
 ] as const

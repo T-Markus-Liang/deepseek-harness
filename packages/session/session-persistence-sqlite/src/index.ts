@@ -18,6 +18,7 @@ import {
   MAX_WRITE_BATCH_DELAY_MS,
   PersistenceCoordinator,
   SessionPersistence,
+  SessionPersistenceAdmin,
   type SessionInspection,
   type SessionLocation,
   type SessionPersistenceSnapshot,
@@ -31,7 +32,6 @@ export { SCHEMA_VERSION } from './schema.ts'
 export const DEFAULT_BUSY_TIMEOUT_MS = 5_000
 /** Largest busy timeout accepted by SQLite's signed millisecond interface. */
 export const MAX_BUSY_TIMEOUT_MS = 2_147_483_647
-
 /** Plugin configuration. */
 export interface Config {
   /** SQLite database path, or `:memory:` for an in-process database. */
@@ -82,6 +82,7 @@ export class SqliteSessionPersistence extends SessionPersistence {
       preparedSessionCacheSize,
       writeBatchMaxDelayMs,
     })
+    new SqlitePersistenceAdmin(ctx, this.store)
   }
 
   /** Reject self-contained path and ownership failures without loading Node SQLite. */
@@ -128,6 +129,24 @@ export class SqliteSessionPersistence extends SessionPersistence {
 
   listSnapshots(signal?: AbortSignal): Promise<SessionPersistenceSnapshot[]> {
     return this.store.listSnapshots(signal)
+  }
+}
+
+/**
+ * SQLite `SessionPersistenceAdmin` provider: physical destroy and relocate
+ * delegated to the shared store.
+ */
+class SqlitePersistenceAdmin extends SessionPersistenceAdmin {
+  constructor(ctx: Context, private readonly store: SqliteStore) {
+    super(ctx)
+  }
+
+  destroy(id: SessionId): Promise<void> {
+    return this.store.destroy(id)
+  }
+
+  relocate(id: SessionId, newCwd: string): Promise<void> {
+    return this.store.relocate(id, newCwd)
   }
 }
 

@@ -271,6 +271,44 @@ export class SqliteStore implements PersistenceBackend<number> {
     this.db.close()
   }
 
+  /**
+   * Physically delete a session's metadata row and every event row. Idempotent:
+   * an id with no stored row resolves without error. The caller MUST guarantee
+   * the session is not live — no live-session guard exists at this layer.
+   * @param id - persisted session id to destroy.
+   */
+  async destroy(id: SessionId): Promise<void> {
+    await this.open()
+    this.db.exec(sql('begin-immediate'))
+    try {
+      validateSchemaForMutation(this.databaseConstructor, this.db, this.databasePath)
+      this.db.prepare(sql('delete-events-from')).run(id, 0)
+      this.db.prepare(sql('delete-session')).run(id)
+      this.db.exec(sql('commit'))
+    } catch (error: unknown) {
+      this.rollback(error, 'destroy')
+    }
+  }
+
+  /**
+   * Update a stored session's `cwd` column and bump its revision. Idempotent:
+   * an id with no stored row resolves without error. The caller MUST guarantee
+   * the session is not live — no live-session guard exists at this layer.
+   * @param id - persisted session id to relocate.
+   * @param newCwd - absolute path of the new project directory.
+   */
+  async relocate(id: SessionId, newCwd: string): Promise<void> {
+    await this.open()
+    this.db.exec(sql('begin-immediate'))
+    try {
+      validateSchemaForMutation(this.databaseConstructor, this.db, this.databasePath)
+      this.db.prepare(sql('update-session-cwd')).run(newCwd, id)
+      this.db.exec(sql('commit'))
+    } catch (error: unknown) {
+      this.rollback(error, 'relocate')
+    }
+  }
+
   private rowFor(id: SessionId): SessionRow | undefined {
     const value = this.db.prepare(sql('select-session')).get(id)
     return value === undefined ? undefined : decodeSessionRow(value)

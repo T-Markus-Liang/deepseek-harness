@@ -780,6 +780,65 @@ describe('JsonlSessionPersistence: durability and crash semantics', () => {
   })
 })
 
+describe('JsonlSessionPersistence: admin destroy/relocate', () => {
+  let ctx: Context
+  beforeEach(async () => {
+    root = await freshRoot()
+    ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(JsonlSessionPersistence, { root, compression: 'none' })
+  })
+  afterEach(async () => { await ctx.fiber.dispose() })
+
+  it('registers the optional sessionPersistenceAdmin service', () => {
+    expect(ctx.get('sessionPersistenceAdmin')).toBeDefined()
+  })
+
+  it('destroy removes the session directory and the list entry', async () => {
+    const m = meta('destroy', '/work')
+    await ctx.sessionPersistence.create(m)
+    await ctx.sessionPersistence.append(m.id, oneTurnLog())
+    expect(await stat(rawLogPath(root, '/work', m.id))).toBeDefined()
+
+    const admin = ctx.get('sessionPersistenceAdmin')!
+    await admin.destroy(m.id)
+
+    await expect(stat(rawLogPath(root, '/work', m.id))).rejects.toThrow()
+    expect((await ctx.sessionPersistence.list()).map(h => h.id)).not.toContain(m.id)
+  })
+
+  it('destroy is idempotent for an absent session', async () => {
+    const admin = ctx.get('sessionPersistenceAdmin')!
+    await expect(admin.destroy(SessionId('absent'))).resolves.toBeUndefined()
+  })
+
+  it('relocate rewrites the header cwd and moves the artifact', async () => {
+    const m = meta('relocate', '/work')
+    await ctx.sessionPersistence.create(m)
+    await ctx.sessionPersistence.append(m.id, oneTurnLog())
+
+    const admin = ctx.get('sessionPersistenceAdmin')!
+    await admin.relocate(m.id, '/target')
+
+    const loaded = await ctx.sessionPersistence.load(m.id)
+    expect(loaded.meta.cwd).toBe('/target')
+    expect((await ctx.sessionPersistence.list()).map(h => h.id)).toContain(m.id)
+    expect(await stat(rawLogPath(root, '/target', m.id))).toBeDefined()
+    await expect(stat(rawLogPath(root, '/work', m.id))).rejects.toThrow()
+  })
+
+  it('relocate to the same cwd is a no-op', async () => {
+    const m = meta('relocate-same', '/work')
+    await ctx.sessionPersistence.create(m)
+    await ctx.sessionPersistence.append(m.id, oneTurnLog())
+
+    const admin = ctx.get('sessionPersistenceAdmin')!
+    await admin.relocate(m.id, '/work')
+
+    expect(await stat(rawLogPath(root, '/work', m.id))).toBeDefined()
+  })
+})
+
 describe('JsonlSessionPersistence: write path (session/event → flush)', () => {
   it('concurrent sessions do not cross buffers', async () => {
     root = await freshRoot()

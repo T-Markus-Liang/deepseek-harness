@@ -17,6 +17,7 @@ import { randomBytes } from 'node:crypto'
 import {
   DEFAULT_PREPARED_SESSION_CACHE_SIZE, DEFAULT_WRITE_BATCH_MAX_DELAY_MS, MAX_WRITE_BATCH_DELAY_MS,
   SessionPersistence, SessionPersistenceRevision, PersistenceCoordinator, SessionFormatUnsupportedError,
+  SessionPersistenceAdmin,
   type PersistenceBackend, type SessionLocation, type SessionPersistenceSnapshot,
   type SessionInspection, type SessionPersistenceRevision as PersistenceRevision, type SessionRawArtifact,
   type StoredPrefix,
@@ -161,6 +162,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
       preparedSessionCacheSize,
       writeBatchMaxDelayMs,
     })
+    new JsonlPersistenceAdmin(ctx, this)
   }
 
   // Each backend keeps the typed service API beside its storage hooks;
@@ -1057,6 +1059,24 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
     }
   }
   /* v8 ignore stop */
+}
+
+/**
+ * JSONL `SessionPersistenceAdmin` provider: physical destroy and relocate
+ * delegated to the main backend's existing file-bytes operations.
+ */
+class JsonlPersistenceAdmin extends SessionPersistenceAdmin {
+  constructor(ctx: Context, private readonly backend: JsonlSessionPersistence) {
+    super(ctx)
+  }
+
+  destroy(id: SessionId): Promise<void> {
+    return this.backend.destroy(id)
+  }
+
+  relocate(id: SessionId, newCwd: string): Promise<void> {
+    return this.backend.relocate(id, newCwd)
+  }
 }
 
 export default JsonlSessionPersistence
