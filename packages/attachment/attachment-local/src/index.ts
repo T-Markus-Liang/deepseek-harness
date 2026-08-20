@@ -21,11 +21,10 @@ export const DEFAULT_MAX_IMAGE_PIXELS = 40_000_000
 /**
  * Default maximum intrinsic width and height for one image. Deployed model
  * routes reject any request whose history carries an image with a side above
- * 2000px once the request holds many images, and an admitted image rides
- * every later request of its session, so admission refuses at the same line
- * to keep the durable history streamable.
+ * 8192px, while the separate decoded-pixel and encoded-byte limits keep
+ * large screenshots bounded before they enter durable session history.
  */
-export const DEFAULT_MAX_IMAGE_DIMENSION = 2000
+export const DEFAULT_MAX_IMAGE_DIMENSION = 8192
 
 /** Local attachment backend configuration. */
 export interface Config {
