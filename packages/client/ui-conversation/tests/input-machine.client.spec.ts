@@ -15,6 +15,8 @@ import type { InputEffect, SubmitAttempt } from '../src/client/input/contract.ts
 import {
   InputMachine, PLACEHOLDER, projectClipboard, referenceDraftText,
 } from '../src/client/input/machine.ts'
+import { userMessageRecallSeed } from '../src/client/input/hub.ts'
+import type { ConversationNode } from '@deepseek-ai/dsh-client-runtime/client'
 import { deriveDecorations, scanTextRefs } from '../src/client/input/decorations.ts'
 
 const LEGACY_PLACEHOLDER = PLACEHOLDER
@@ -944,6 +946,47 @@ describe('input-machine: sent-message history recall', () => {
     expect(m.state).toMatchObject({ draft: 'work in progress', historyIndex: -1, historyDraft: '' })
     expect(m.state.history).toEqual([])
     expect(m.state.draftRev).toBe(rev)
+  })
+
+  it('constructor history preloads the recall stack (newest last, bounded)', () => {
+    const m = new InputMachine({ history: ['oldest', 'middle', 'newest'] })
+    expect(m.state.history).toEqual(['oldest', 'middle', 'newest'])
+    m.dispatch({ type: 'history-prev' })
+    expect(m.state.draft).toBe('newest')
+  })
+
+  it('history-seed fills an empty stack once and is a no-op on a non-empty stack', () => {
+    const m = new InputMachine()
+    m.dispatch({ type: 'history-seed', history: ['oldest', 'newest'] })
+    expect(m.state.history).toEqual(['oldest', 'newest'])
+    // ↑ browses the seeded stack.
+    m.dispatch({ type: 'history-prev' })
+    expect(m.state.draft).toBe('newest')
+    // A later seed is a no-op: the stack already holds entries.
+    m.dispatch({ type: 'history-seed', history: ['replacement'] })
+    expect(m.state.history).toEqual(['oldest', 'newest'])
+  })
+
+  it('history-seed on an empty seed leaves the stack empty', () => {
+    const m = new InputMachine()
+    m.dispatch({ type: 'history-seed', history: [] })
+    expect(m.state.history).toEqual([])
+    expect(m.dispatch({ type: 'history-prev' })).toEqual([])
+  })
+
+  it('userMessageRecallSeed projects user messages newest last, skipping blanks and non-text blocks', () => {
+    const nodes: ConversationNode[] = [
+      { kind: 'user', seq: 1, time: 1, content: [{ type: 'text', text: 'first  ' }], source: null },
+      { kind: 'assistant', seq: 2, time: 2, turn: 1, step: 1, blocks: [{ kind: 'text', text: 'reply' }] },
+      { kind: 'user', seq: 3, time: 3, content: [{ type: 'text', text: '' }], source: null },
+      { kind: 'user', seq: 4, time: 4, content: [
+        { type: 'text', text: 'with ' },
+        { type: 'image', attachment: {} as never },
+        { type: 'text', text: 'text' },
+      ], source: null },
+      { kind: 'user', seq: 5, time: 5, content: [{ type: 'text', text: '   ' }], source: null },
+    ]
+    expect(userMessageRecallSeed(nodes)).toEqual(['with text', 'first'])
   })
 
   it('send-committed records the projected plain text and clears the draft like a commit', () => {

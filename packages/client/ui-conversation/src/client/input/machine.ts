@@ -146,6 +146,11 @@ export class InputMachine {
   constructor(options: InputMachineOptions = {}) {
     this.mergeWindowMs = options.mergeWindowMs ?? 1000
     this.now = options.now ?? (() => 0)
+    // Preloaded persisted recall stack (newest last); blank sends and
+    // over-limit entries are already excluded by the seed producer.
+    if (options.history !== undefined && options.history.length > 0) {
+      this.history = [...options.history].slice(-HISTORY_LIMIT)
+    }
   }
 
   /** Read-only snapshot of the machine state (queue always empty at this tier). */
@@ -199,6 +204,7 @@ export class InputMachine {
       case 'adjudication-failed': return this.onAdjudicationFailed(ev.attempt, ev.message)
       case 'submit-settled': return this.onSubmitSettled(ev)
       case 'send-committed': return this.onSendCommitted()
+      case 'history-seed': return this.onHistorySeed(ev.history)
       case 'history-prev': return this.onHistoryPrev()
       case 'history-next': return this.onHistoryNext()
       case 'release': return this.onRelease()
@@ -621,6 +627,19 @@ export class InputMachine {
     if (projected.trim() === '' || this.history[this.history.length - 1] === projected) return
     this.history = [...this.history, projected]
     if (this.history.length > HISTORY_LIMIT) this.history = this.history.slice(1)
+  }
+
+  /**
+   * Seed the recall stack from the session's persisted user messages (the
+   * reload case: the in-memory stack starts empty). Only an empty stack is
+   * seeded — a stack that already holds in-page sends keeps them and the
+   * seed's tail instead of being overwritten.
+   */
+  private onHistorySeed(seed: readonly string[]): InputEffect[] {
+    if (this.history.length > 0) return []
+    if (seed.length === 0) return []
+    this.history = [...seed].slice(-HISTORY_LIMIT)
+    return []
   }
 
   /**

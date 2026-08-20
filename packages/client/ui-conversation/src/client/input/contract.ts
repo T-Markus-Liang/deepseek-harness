@@ -220,6 +220,13 @@ export interface InputMachineOptions {
   readonly mergeWindowMs?: number
   /** Monotonic clock for typing-merge decisions (default: constant 0). */
   readonly now?: () => number
+  /**
+   * Preloaded sent-message recall stack (newest last; oldest entries over
+   * HISTORY_LIMIT are evicted). Empty by default; the wiring layer seeds it
+   * from the session's persisted user messages so ↑/↓ works right after a
+   * page reload, before any in-page send.
+   */
+  readonly history?: readonly string[]
 }
 
 /** Published input state (the currency; per-session). */
@@ -296,6 +303,8 @@ export type InputEvent =
   | { readonly type: 'submit-settled'; readonly attempt: SubmitAttempt; readonly ok: boolean; readonly outcome?: SubmitOutcome; readonly message?: string }
   /** Commit an image-only send whose empty draft did not need an attempt. */
   | { readonly type: 'send-committed' }
+  /** Seed the recall stack from persisted history; a no-op when the stack is non-empty. */
+  | { readonly type: 'history-seed'; readonly history: readonly string[] }
   /** ↑: browse one sent message back (terminal-style recall); no-op when empty or already at the oldest. */
   | { readonly type: 'history-prev' }
   /** ↓: browse one sent message forward; a fresh draft (index -1) is a no-op. */

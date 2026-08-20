@@ -44,6 +44,12 @@ export interface SessionInputDeps {
    * order (the empty-draft accelerated-Enter gesture); absent = unsupported.
    */
   steerQueue?: (() => void) | undefined
+  /**
+   * Persisted sent-message texts for this session (newest last), read lazily
+   * at first ↑ when the machine's in-memory stack is empty — the reload
+   * seed. Absent = recall starts from in-page sends only.
+   */
+  historySeed?: (() => readonly string[]) | undefined
   /** The plain-message sink (send choreography / materialize fork — the hub owns it). */
   defaultSink(
     text: string,
@@ -300,6 +306,11 @@ export class SessionInputShell implements SessionInput {
    */
   historyPrev(): boolean {
     const before = this.core.state.historyIndex
+    // Reload case: the in-memory stack is empty, so seed it once from the
+    // session's persisted user messages before browsing.
+    if (this.core.state.history.length === 0 && this.deps.historySeed !== undefined) {
+      this.run(this.core.dispatch({ type: 'history-seed', history: this.deps.historySeed() }))
+    }
     this.run(this.core.dispatch({ type: 'history-prev' }))
     return this.core.state.historyIndex !== before
   }

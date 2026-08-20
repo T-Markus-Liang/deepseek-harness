@@ -80,6 +80,8 @@ interface BenchOptions {
   queue?: ConversationSnapshot['queue']
   /** The hub's steer-all face (empty-draft accelerated Enter). */
   steerQueue?: () => void
+  /** Persisted sent-message recall seed (newest last) served to the shell. */
+  historySeed?: () => readonly string[]
   variant?: 'hero' | 'composer'
   placeholder?: string
   t?: InputBarProps['t']
@@ -129,6 +131,7 @@ function bench(over?: BenchOptions) {
       subscribe: fn => session.subscribe(fn),
     },
     ...(over?.steerQueue !== undefined ? { steerQueue: over.steerQueue } : {}),
+    ...(over?.historySeed !== undefined ? { historySeed: over.historySeed } : {}),
     // Lexicon-only stub: adjudication untouched (undefined slash methods are
     // never reached — these benches drive plain-draft flows only).
     ...(lex !== undefined
@@ -233,6 +236,27 @@ describe('sent-message keyboard history', () => {
     expect(textarea.value).toBe('第一条消息')
     fireEvent.keyDown(textarea, { key: 'ArrowDown' })
     expect(textarea.value).toBe('当前草稿')
+  })
+
+  it('ArrowUp recalls persisted user messages on a reloaded page (empty in-memory stack)', () => {
+    // The reload case: no in-page send, the session's persisted messages are
+    // the only recall source (newest last).
+    const { textarea, shell } = bench({ historySeed: () => ['最早的消息', '最新的消息'] })
+    fireEvent.change(textarea, { target: { value: '刷新后正在输入' } })
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(textarea.value).toBe('最新的消息')
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(textarea.value).toBe('最早的消息')
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    expect(textarea.value).toBe('最新的消息')
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    // Past the newest seed entry, the pre-browse draft is restored.
+    expect(textarea.value).toBe('刷新后正在输入')
+    // The seed is consulted only once: a later seed change does not rewrite
+    // an already-seeded stack.
+    const before = shell.snapshot.history
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(shell.snapshot.history).toEqual(before)
   })
 })
 

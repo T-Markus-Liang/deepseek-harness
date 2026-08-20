@@ -9,6 +9,7 @@
  * real host entity, so the sink is one unconditional prompt path.
  */
 import type { ClientContext, ISessions, SessionBinding, SessionFace, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ConversationNode } from '@deepseek-ai/dsh-client-runtime/client'
 import type { InputTriggerController, SubmitImageAttachment, SubmitOutcome } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import { queueReadFaceOf } from '../queue/store.ts'
@@ -20,6 +21,30 @@ import { SessionInputShell } from './facade.ts'
 /** Structural command face for per-session popup resolution. */
 interface CommandFace {
   popupFor(actx: ClientContext): PopupDismissFace
+}
+
+/**
+ * Extract the persisted sent-message texts of a session for ↑/↓ recall
+ * seeding (newest last, blank/whitespace-only messages excluded). Text blocks
+ * of each finalized user message are joined; merge-extensible blocks without
+ * text contribute nothing.
+ * @param nodes - the conversation snapshot's node list (chronological).
+ * @returns the recall seed, newest entry last.
+ */
+export function userMessageRecallSeed(nodes: readonly ConversationNode[]): readonly string[] {
+  const texts: string[] = []
+  for (const node of nodes) {
+    if (node.kind !== 'user') continue
+    let text = ''
+    for (const block of node.content) {
+      if (block.type === 'text') text += block.text
+    }
+    // The sink trims on send, so persisted messages are trimmed; a defensive
+    // trim here keeps the seed aligned with what ↑ re-fills into the draft.
+    const trimmed = text.trim()
+    if (trimmed !== '') texts.push(trimmed)
+  }
+  return texts.reverse()
 }
 
 /** Attachment-send face resolved lazily to keep hub/service construction acyclic. */
@@ -77,6 +102,7 @@ export class InputHub implements SessionInputResolver {
       inputTriggers: () => this.controller(actx),
       popup: () => this.popup(actx),
       queue: queueReadFaceOf(session),
+      historySeed: () => userMessageRecallSeed(session.getSnapshot().nodes),
       defaultSink: (text, imageIds, mode, signal) => this.sink(session, text, imageIds, mode, signal),
       steerQueue: () => { void this.steerQueue(session, shell) },
       commandImages: {
