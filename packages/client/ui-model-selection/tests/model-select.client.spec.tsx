@@ -135,7 +135,7 @@ describe('ModelSelect reasoning effort', () => {
     expect(screen.getByRole('menuitemradio', { name: 'DeepSeek-V4-Flash' })).toBeTruthy()
   })
 
-  it('announces a rejected selection as a transient toast and keeps the in-menu strip for loads', async () => {
+  it('allows a text-only model after an image-capable session has accumulated images', async () => {
     const groups = [{
       id: 'deepseek-official',
       name: 'DeepSeek',
@@ -145,9 +145,9 @@ describe('ModelSelect reasoning effort', () => {
       ],
     }]
     const directory = createSnapshotStore<ModelDirectoryState>(state({ groups }))
-    const select = vi.fn(async () => {
-      directory.set(state({ groups, status: 'error', error: 'model-unavailable: session already contains images' }))
-      return false
+    const select = vi.fn(async (selection: ModelSelection) => {
+      directory.set(state({ groups, current: selection }))
+      return true
     })
     render(<ModelSelect
       locked={false}
@@ -161,10 +161,13 @@ describe('ModelSelect reasoning effort', () => {
     fireEvent.click(screen.getByRole('button', { name: /选择模型|当前/ }))
     fireEvent.click(screen.getByRole('menuitem', { name: /模型/ }))
     fireEvent.click(screen.getByRole('menuitemradio', { name: /DeepSeek-V4-Pro/ }))
-    const toast = await screen.findByRole('alert')
-    expect(toast.textContent).toContain('模型操作失败：model-unavailable: session already contains images')
-    // The selection failure does not render the in-menu load strip (no Retry).
-    expect(screen.queryByRole('button', { name: '重试' })).toBeNull()
+    await waitFor(() => {
+      expect(select).toHaveBeenCalledWith({
+        provider: 'deepseek-official',
+        model: 'deepseek-v4-pro',
+      })
+    })
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('renders no Agent-bound control for an addressed subagent session', () => {
