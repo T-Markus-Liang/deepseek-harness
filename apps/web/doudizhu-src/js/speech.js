@@ -144,7 +144,8 @@ function speakViaCosy(roleName, text, voiceKey) {
   }
   // 2. CosyVoice2（彩蛋方言：粤语/四川）
   if (cosyManifest && cosyManifest[cosyKey]) {
-    playWavAsBlob('/tts_cosy/' + cosyManifest[cosyKey], fallback);   // 加 /tts_cosy/ 前缀
+    // manifest 值已含 /tts_cosy/ 前缀（与 tts_cosy_it 的纯文件名格式不同），直接使用
+    playWavAsBlob(cosyManifest[cosyKey], fallback);
     return true;
   }
   return false;
