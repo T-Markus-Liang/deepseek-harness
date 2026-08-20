@@ -48,3 +48,6 @@ apps/web/doudizhu-src/tts_assets/
 apps/web/doudizhu-src/*.png
 apps/web/doudizhu-src/voice_test.html
 apps/web/doudizhu-src/voice_test_page.png
+
+# dsh-browser screenshot artifacts
+browser-screenshots/
