@@ -53,14 +53,19 @@ function startBGM() {
   initAudio();
   if (!audioCtx) return;
 
-  // 恢复 AudioContext（手势解锁）
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-
   isPlaying = true;
 
-  loadBGM().then(buffer => {
+  // 恢复 AudioContext（手势解锁）；确保 resume 完成后再 start，否则可能无声
+  const ensureRunning = () => {
+    if (audioCtx.state === 'suspended') {
+      return audioCtx.resume().catch(() => {});
+    }
+    return Promise.resolve();
+  };
+
+  ensureRunning().then(() => {
+    return loadBGM();
+  }).then(buffer => {
     if (!buffer || !isPlaying) return;
 
     // 停止旧的播放源（如有）

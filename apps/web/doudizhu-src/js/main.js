@@ -100,6 +100,15 @@ function initGame() {
     }
   });
   
+  // 兜底：iframe 内任何用户交互都尝试启动 BGM（postMessage 可能因时序/缓存丢失）
+  // 用户已手动静音（bgmUserMuted=true）时 tryStartBGM 内部会拒绝，不会打扰
+  const tryStartBGMOnce = () => {
+    try { tryStartBGM(); } catch (e) {}
+  };
+  window.addEventListener('pointerdown', tryStartBGMOnce, { once: true });
+  window.addEventListener('touchstart', tryStartBGMOnce, { once: true });
+  window.addEventListener('click', tryStartBGMOnce, { once: true });
+  
   // 设置回调
   game.onStateChange = (state) => {
     renderer.renderState(state);
