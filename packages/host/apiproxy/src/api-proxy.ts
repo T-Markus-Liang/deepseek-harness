@@ -2977,10 +2977,6 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             })
           }
         }
-        const admin = ctx.get('sessionPersistenceAdmin')
-        if (admin === undefined) {
-          return err(request, { code: 'internal', message: 'session persistence admin is unavailable', details: {} })
-        }
         const header = (await ctx.sessionPersistence.list()).find(stored => stored.id === sessionId)
         if (header === undefined) {
           return err(request, {
@@ -2996,7 +2992,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             details: { sessionId },
           })
         }
-        await admin.destroy(sessionId)
+        await ctx.sessionPersistence.remove(sessionId)
         await ctx.workspaceRegistry.unaccountSession(sessionId)
         return ok(request, { sessionId })
       },
@@ -3039,10 +3035,6 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         }
         const workspace = ctx.workspaceRegistry.get(brandWorkspaceId(workspaceId))
         if (workspace === undefined) return workspaceNotFound(request, workspaceId)
-        const admin = ctx.get('sessionPersistenceAdmin')
-        if (admin === undefined) {
-          return err(request, { code: 'internal', message: 'session persistence admin is unavailable', details: {} })
-        }
         const header = (await ctx.sessionPersistence.list()).find(stored => stored.id === sessionId)
         if (header === undefined) {
           return err(request, {

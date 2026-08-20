@@ -305,12 +305,8 @@ export class WorkspaceRegistry extends Service {
       if (target === undefined) {
         throw new Error(`workspace '${targetWorkspaceId}' not found`)
       }
-      const admin = this.ctx.get('sessionPersistenceAdmin')
-      if (admin === undefined) {
-        throw new Error('session persistence admin is unavailable')
-      }
-      await admin.relocate(sessionId, target.path)
-      // Sync the in-memory caches with the relocated header before attach
+      await this.ctx.sessionPersistence.move(sessionId, target.path)
+      // Sync the in-memory caches with the moved header before attach
       // validates cwd against the target path.
       const oldHeader = this.headers.get(sessionId)
       if (oldHeader !== undefined) {

@@ -275,9 +275,9 @@ export class SqliteStore implements PersistenceBackend<number> {
    * Physically delete a session's metadata row and every event row. Idempotent:
    * an id with no stored row resolves without error. The caller MUST guarantee
    * the session is not live — no live-session guard exists at this layer.
-   * @param id - persisted session id to destroy.
+   * @param id - persisted session id to remove.
    */
-  async destroy(id: SessionId): Promise<void> {
+  async removeArtifact(id: SessionId): Promise<void> {
     await this.open()
     this.db.exec(sql('begin-immediate'))
     try {
@@ -286,7 +286,7 @@ export class SqliteStore implements PersistenceBackend<number> {
       this.db.prepare(sql('delete-session')).run(id)
       this.db.exec(sql('commit'))
     } catch (error: unknown) {
-      this.rollback(error, 'destroy')
+      this.rollback(error, 'remove session')
     }
   }
 
@@ -294,10 +294,10 @@ export class SqliteStore implements PersistenceBackend<number> {
    * Update a stored session's `cwd` column and bump its revision. Idempotent:
    * an id with no stored row resolves without error. The caller MUST guarantee
    * the session is not live — no live-session guard exists at this layer.
-   * @param id - persisted session id to relocate.
+   * @param id - persisted session id to move.
    * @param newCwd - absolute path of the new project directory.
    */
-  async relocate(id: SessionId, newCwd: string): Promise<void> {
+  async moveArtifact(id: SessionId, newCwd: string): Promise<void> {
     await this.open()
     this.db.exec(sql('begin-immediate'))
     try {
@@ -305,7 +305,7 @@ export class SqliteStore implements PersistenceBackend<number> {
       this.db.prepare(sql('update-session-cwd')).run(newCwd, id)
       this.db.exec(sql('commit'))
     } catch (error: unknown) {
-      this.rollback(error, 'relocate')
+      this.rollback(error, 'move session')
     }
   }
 

@@ -18,7 +18,6 @@ import {
   MAX_WRITE_BATCH_DELAY_MS,
   PersistenceCoordinator,
   SessionPersistence,
-  SessionPersistenceAdmin,
   type SessionInspection,
   type SessionLocation,
   type SessionPersistenceSnapshot,
@@ -82,7 +81,6 @@ export class SqliteSessionPersistence extends SessionPersistence {
       preparedSessionCacheSize,
       writeBatchMaxDelayMs,
     })
-    new SqlitePersistenceAdmin(ctx, this.store)
   }
 
   /** Reject self-contained path and ownership failures without loading Node SQLite. */
@@ -101,6 +99,14 @@ export class SqliteSessionPersistence extends SessionPersistence {
 
   append(id: SessionId, events: readonly SessionEvent[]): Promise<void> {
     return this.coordinator.append(id, events)
+  }
+
+  override remove(id: SessionId): Promise<void> {
+    return this.coordinator.remove(id)
+  }
+
+  override move(id: SessionId, newCwd: string): Promise<void> {
+    return this.coordinator.move(id, newCwd)
   }
 
   override prepare(id: SessionId, signal?: AbortSignal): Promise<SessionPreparation> {
@@ -129,24 +135,6 @@ export class SqliteSessionPersistence extends SessionPersistence {
 
   listSnapshots(signal?: AbortSignal): Promise<SessionPersistenceSnapshot[]> {
     return this.store.listSnapshots(signal)
-  }
-}
-
-/**
- * SQLite `SessionPersistenceAdmin` provider: physical destroy and relocate
- * delegated to the shared store.
- */
-class SqlitePersistenceAdmin extends SessionPersistenceAdmin {
-  constructor(ctx: Context, private readonly store: SqliteStore) {
-    super(ctx)
-  }
-
-  destroy(id: SessionId): Promise<void> {
-    return this.store.destroy(id)
-  }
-
-  relocate(id: SessionId, newCwd: string): Promise<void> {
-    return this.store.relocate(id, newCwd)
   }
 }
 

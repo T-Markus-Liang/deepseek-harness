@@ -17,7 +17,6 @@ import { randomBytes } from 'node:crypto'
 import {
   DEFAULT_PREPARED_SESSION_CACHE_SIZE, DEFAULT_WRITE_BATCH_MAX_DELAY_MS, MAX_WRITE_BATCH_DELAY_MS,
   SessionPersistence, SessionPersistenceRevision, PersistenceCoordinator, SessionFormatUnsupportedError,
-  SessionPersistenceAdmin,
   type PersistenceBackend, type SessionLocation, type SessionPersistenceSnapshot,
   type SessionInspection, type SessionPersistenceRevision as PersistenceRevision, type SessionRawArtifact,
   type StoredPrefix,
@@ -162,7 +161,6 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
       preparedSessionCacheSize,
       writeBatchMaxDelayMs,
     })
-    new JsonlPersistenceAdmin(ctx, this)
   }
 
   // Each backend keeps the typed service API beside its storage hooks;
@@ -181,6 +179,14 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
 
   append(id: SessionId, events: readonly SessionEvent[]): Promise<void> {
     return this.coordinator.append(id, events)
+  }
+
+  override remove(id: SessionId): Promise<void> {
+    return this.coordinator.remove(id)
+  }
+
+  override move(id: SessionId, newCwd: string): Promise<void> {
+    return this.coordinator.move(id, newCwd)
   }
 
   override prepare(id: SessionId, signal?: AbortSignal): Promise<SessionPreparation> {
@@ -451,9 +457,9 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
    * leftover temp files — under whichever project directory holds the id.
    * Idempotent: an id with no stored artifact resolves without error. The
    * owning project directory and every other session are never touched.
-   * @param id - persisted session id to destroy.
+   * @param id - persisted session id to remove.
    */
-  async destroy(id: SessionId): Promise<void> {
+  async removeArtifact(id: SessionId): Promise<void> {
     const path = await this.findLog(id)
     if (path === undefined) return
     await rm(dirname(path), { recursive: true, force: true })
@@ -466,10 +472,10 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
    * atomic mechanism as `materialize`, then removes the old artifact and
    * its owning session directory. A crash between publish and cleanup leaves
    * a duplicate that `listArtifacts` resolves by preferring the newer file.
-   * @param id - persisted session id to relocate.
+   * @param id - persisted session id to move.
    * @param newCwd - absolute path of the new project directory.
    */
-  async relocate(id: SessionId, newCwd: string): Promise<void> {
+  async moveArtifact(id: SessionId, newCwd: string): Promise<void> {
     const raw = await this.readRaw(id)
     if (raw === undefined) return
     const oldPath = await this.findLog(id)
@@ -570,7 +576,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
         await this.assertStoredIdentity(path, meta, undefined, signal)
         signal?.throwIfAborted()
         if (ids.has(meta.id)) {
-          // Relocation crash recovery: a duplicate arises when relocate
+          // Move crash recovery: a duplicate can arise when moving
           // published the new artifact but crashed before removing the old
           // one. Prefer the newer file (the relocated copy was written most
           // recently); a genuine duplicate also resolves to the newer file,
@@ -876,7 +882,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
       if (pathExists) matches.push(path)
     }
     if (matches.length > 1) {
-      // Relocation crash recovery: prefer the newer file (the relocated copy
+      // Move crash recovery: prefer the newer file (the moved copy
       // was written most recently); a genuine duplicate also resolves to the
       // newer file, which is the safer default.
       const stats = await Promise.all(matches.map(path => stat(path, { bigint: true })))
@@ -1062,21 +1068,7 @@ export class JsonlSessionPersistence extends SessionPersistence implements Persi
 }
 
 /**
- * JSONL `SessionPersistenceAdmin` provider: physical destroy and relocate
- * delegated to the main backend's existing file-bytes operations.
+ * JSONL persistence delegates lifecycle operations through its coordinator;
+ * the backend methods above own only durable file-byte changes.
  */
-class JsonlPersistenceAdmin extends SessionPersistenceAdmin {
-  constructor(ctx: Context, private readonly backend: JsonlSessionPersistence) {
-    super(ctx)
-  }
-
-  destroy(id: SessionId): Promise<void> {
-    return this.backend.destroy(id)
-  }
-
-  relocate(id: SessionId, newCwd: string): Promise<void> {
-    return this.backend.relocate(id, newCwd)
-  }
-}
-
 export default JsonlSessionPersistence

@@ -192,6 +192,12 @@ export interface PersistenceBackend<TornMarker = unknown> {
    */
   commitRepair(meta: SessionHeader, tornMarker: TornMarker | undefined, closers: readonly SessionEvent[]): Promise<void>
 
+  /** Remove every durable artifact for one detached session. */
+  removeArtifact?(id: SessionId): Promise<void>
+
+  /** Move one detached session and rewrite its persisted cwd. */
+  moveArtifact?(id: SessionId, newCwd: string): Promise<void>
+
   /**
    * List all stored (materialized) sessions' metadata.
    * @param signal - optional cancellation for backend listing work.
@@ -655,6 +661,40 @@ export class PersistenceCoordinator<TornMarker = unknown> {
     }
     // Pure lazy: record intent only. No artifact until the first append.
     this.states.set(meta.id, { meta, cursor: 0, materialized: false })
+  }
+
+  /** Remove one detached session and release all coordinator bookkeeping. */
+  remove(id: SessionId): Promise<void> {
+    return this.lifecycleGuard(id, 'remove', async () => {
+      if (this.backend.removeArtifact === undefined) {
+        throw new Error('this session persistence backend does not support removing sessions')
+      }
+      await this.backend.removeArtifact(id)
+      this.states.delete(id)
+      this.preparations.invalidate(id)
+    })
+  }
+
+  /** Move one detached session through the backend's durable lifecycle seam. */
+  move(id: SessionId, newCwd: string): Promise<void> {
+    return this.lifecycleGuard(id, 'move', async () => {
+      if (this.backend.moveArtifact === undefined) {
+        throw new Error('this session persistence backend does not support moving sessions')
+      }
+      await this.backend.moveArtifact(id, newCwd)
+      const state = this.states.get(id)
+      if (state !== undefined) state.meta = { ...state.meta, cwd: newCwd }
+    })
+  }
+
+  private lifecycleGuard<T>(id: SessionId, operation: string, action: () => Promise<T>): Promise<T> {
+    if (this.ctx.sessions.get(id) !== undefined) {
+      return Promise.reject(new Error(`cannot ${operation} session "${id}" while it is live`))
+    }
+    if (this.retirements.has(id) || this.preparations.has(id)) {
+      return Promise.reject(new Error(`cannot ${operation} session "${id}" while it has in-memory persistence state`))
+    }
+    return this.serialize(id, action)
   }
 
   // `async` so synchronous materialization failures below reject (not throw) per
