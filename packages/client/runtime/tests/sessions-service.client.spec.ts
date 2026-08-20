@@ -595,6 +595,18 @@ describe('fork', () => {
 })
 
 describe('delete', () => {
+  it('removes the session row and clears the current selection', async () => {
+    const b = bench()
+    await feedList(b, [{ id: 's1' }, { id: 's2' }])
+    b.svc.open(sid('s1'))
+    await b.svc.deleteSession(sid('s1'))
+    expect(b.api.callsOf('workspace.deleteSession')).toEqual([{ sessionId: 's1' }])
+    expect(b.svc.list.getSnapshot().ids).toEqual(['s2'])
+    expect(b.svc.list.getSnapshot().current).toBeUndefined()
+  })
+})
+
+describe('delete', () => {
   it('a session-added frame births the row (blank) and makes the scope resolvable; removal prunes it', async () => {
     const b = bench()
     await feedList(b, [])

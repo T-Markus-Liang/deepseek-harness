@@ -531,6 +531,13 @@ export class SessionRuntime implements ISessions {
     return childId
   }
 
+  /** Permanently delete one cold session and republish the local list. */
+  async deleteSession(sessionId: SessionId): Promise<void> {
+    const result = await this.manager.deleteSession(sessionId)
+    if (!result.ok) throw new Error(`session delete failed: ${result.error.code}: ${result.error.message}`)
+    this.projectList()
+  }
+
   /**
    * Resolve an Agent-scoped context view (use-and-discard).
    * @param id - session id (the agent identity — 1:1 same axis).
