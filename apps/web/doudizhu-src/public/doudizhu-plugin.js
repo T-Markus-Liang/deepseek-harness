@@ -2,6 +2,8 @@
  * 斗地主 Plugin Injector
  * 每次打开弹窗创建新 iframe，关闭时彻底销毁，避免资源泄漏。
  * 通过 postMessage 向 iframe 传递用户手势，解除音频自动播放限制。
+ * 背景音乐在父页面播放（FAB 点击 = 真实用户手势，Safari/Chrome 均允许自动播放；
+ * iframe 内 AudioContext 在 Safari 下无法通过父页面手势解锁）。
  */
 (function() {
   'use strict';
@@ -13,6 +15,88 @@
   let modalEl = null;
   let iframeEl = null;
   let fabEl = null;
+
+  // ===== 父页面 BGM 播放器（Safari 自动播放兼容）=====
+  let bgmAudio = null;       // HTMLAudioElement（父页面，FAB 手势解锁）
+  let bgmVol = 0.35;         // 音量
+  let bgmMutedByUser = false; // 用户手动静音（跨会话保留在父页面）
+
+  function bgmInit() {
+    if (bgmAudio) return;
+    try {
+      bgmAudio = new Audio('/dou_dizhu_bgm.mp3');
+      bgmAudio.loop = true;
+      bgmAudio.volume = bgmVol;
+      bgmAudio.preload = 'auto';
+    } catch (e) {
+      bgmAudio = null;
+    }
+  }
+
+  function bgmPlaying() {
+    return !!bgmAudio && !bgmAudio.paused && !bgmAudio.ended;
+  }
+
+  function bgmPostState() {
+    try {
+      if (iframeEl && iframeEl.contentWindow) {
+        iframeEl.contentWindow.postMessage({ type: 'DOUDIZHU_BGM_STATE', playing: bgmPlaying() && !bgmMutedByUser, volume: bgmVol }, '*');
+      }
+    } catch (e) {}
+  }
+
+  // 启动 BGM。必须在用户手势调用栈内调用（FAB 点击）才能通过自动播放策略。
+  function bgmStart() {
+    if (bgmMutedByUser) return false;
+    bgmInit();
+    if (!bgmAudio) return false;
+    try {
+      const p = bgmAudio.play();
+      if (p && p.then) p.then(bgmPostState).catch(() => {});
+      else bgmPostState();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function bgmStop() {
+    if (bgmAudio) {
+      try { bgmAudio.pause(); } catch (e) {}
+      try { bgmAudio.currentTime = 0; } catch (e) {}
+    }
+    bgmPostState();
+  }
+
+  function bgmToggle() {
+    if (bgmPlaying()) {
+      bgmStop();
+    } else {
+      if (bgmMutedByUser) bgmMutedByUser = false; // 用户手动打开 → 解除静音
+      bgmStart();
+    }
+  }
+
+  function bgmSetVolume(v) {
+    bgmVol = Math.max(0, Math.min(1, v));
+    if (bgmAudio) bgmAudio.volume = bgmVol;
+    bgmPostState();
+  }
+
+  // iframe → 父页面 BGM 控制
+  function onIframeMessage(e) {
+    const d = e.data;
+    if (!d || d.type !== 'DOUDIZHU_BGM') return;
+    switch (d.action) {
+      case 'start': bgmStart(); break;
+      case 'stop': bgmStop(); break;
+      case 'toggle': bgmToggle(); break;
+      case 'setVolume': bgmSetVolume(d.volume); break;
+      case 'mute': bgmMutedByUser = true; bgmStop(); break;
+      case 'unmute': bgmMutedByUser = false; bgmStart(); break;
+    }
+  }
+  window.addEventListener('message', onIframeMessage);
 
   function createStyles() {
     const style = document.createElement('style');
@@ -175,6 +259,8 @@
     createIframe();
     modalEl.classList.add('open');
     document.body.style.overflow = 'hidden';
+    // 在用户手势调用栈内启动 BGM（父页面 AudioContext/audio 元素，Safari 也允许）
+    bgmStart();
   }
 
   function closeModal() {
@@ -182,6 +268,7 @@
     modalOpen = false;
     modalEl.classList.remove('open');
     document.body.style.overflow = '';
+    bgmStop(); // 关闭弹窗停 BGM（下次打开重新播放）
     setTimeout(function() {
       if (!modalOpen) destroyIframe();
     }, 300);

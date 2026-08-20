@@ -3475,11 +3475,14 @@ class Renderer {
 
 // ==================== 斗地主 - 背景音乐（原版mp3播放） ====================
 // 使用小旭音乐《欢乐斗地主-游戏中1》原版 BGM（33秒循环播放）
-// 通过 Web Audio API 播放（可复用 AudioContext 手势解锁，实现默认打开）
+// 优先通过父页面插件播放（FAB 点击 = 父页面真实手势，Safari/Chrome 均允许自动播放；
+// iframe 内 AudioContext 在 Safari 下无法通过父页面手势解锁）。
+// 父页面不可用时（如脱离插件直接访问 iframe），fallback 到本页面 Web Audio 播放。
 
 let audioCtx = null;
-let isPlaying = false;
-let bgmBuffer = null;      // 解码后的音频缓冲
+let isPlaying = false;      // 是否处于"应播放"状态（父页面或本地）
+let parentBGM = false;      // 是否已确认父页面接管 BGM
+let bgmBuffer = null;      // 解码后的音频缓冲（本地 fallback）
 let bgmSource = null;      // 当前播放源
 let bgmGain = null;        // 音量控制节点
 let bgmFetchStarted = false;
@@ -3488,8 +3491,33 @@ let bgmUserMuted = false;  // 用户手动静音标志：true 时任何逻辑都
 
 const BGM_URL = '/dou_dizhu_bgm.mp3';
 
+// 向父页面发送 BGM 控制指令（插件在父页面用真实手势播放）
+function _bgmParent(action, volume) {
+  try {
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'DOUDIZHU_BGM', action, volume }, '*');
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+// 监听父页面 BGM 状态回传（playing/volume），同步本地按钮状态
+window.addEventListener('message', (e) => {
+  const d = e.data;
+  if (!d || d.type !== 'DOUDIZHU_BGM_STATE') return;
+  parentBGM = true;
+  isPlaying = !!d.playing;
+  if (typeof d.volume === 'number') bgmVolume = d.volume;
+  // 同步喇叭按钮
+  const toggle = document.getElementById('bgm-toggle');
+  if (toggle) toggle.textContent = isPlaying ? '🔊 音乐' : '🔇 音乐';
+  const volEl = document.getElementById('bgm-volume');
+  if (volEl) volEl.style.display = isPlaying ? 'inline-block' : 'none';
+});
+
 /**
- * 初始化 AudioContext
+ * 初始化 AudioContext（本地 fallback 用）
  */
 function initAudio() {
   if (audioCtx) return;
@@ -3520,11 +3548,20 @@ async function loadBGM() {
 
 /**
  * 开始播放背景音乐
+ * 优先：通知父页面插件播放（父页面 FAB 手势解锁，Safari/Chrome 均可自动播放）
+ * 兜底：父页面不可用（脱离插件直接访问 iframe）时本地 Web Audio 播放
  */
 function startBGM() {
   if (isPlaying) return;
   if (bgmUserMuted) return; // 用户已静音则不播放
 
+  // 通知父页面播放（真实手势已在 FAB 点击时授予父页面）
+  if (_bgmParent('start')) {
+    isPlaying = true; // 乐观置为播放中，父页面状态回传会校正
+    return;
+  }
+
+  // 本地 fallback
   initAudio();
   if (!audioCtx) return;
 
@@ -3568,6 +3605,7 @@ function startBGM() {
  */
 function stopBGM() {
   isPlaying = false;
+  _bgmParent('stop'); // 通知父页面停止（若已接管）
 
   if (bgmSource) {
     try { bgmSource.stop(); } catch (e) {}
@@ -3584,8 +3622,10 @@ function toggleBGM() {
   if (isPlaying) {
     stopBGM();
     bgmUserMuted = true;  // 用户点击关闭 → 永久静音直到再次手动打开
+    _bgmParent('mute');   // 同步父页面静音状态
   } else {
     bgmUserMuted = false; // 用户手动打开 → 解除静音
+    _bgmParent('unmute'); // 同步父页面解除静音
     startBGM();
   }
 }
@@ -3643,6 +3683,7 @@ function setBGMVolume(level) {
   if (bgmGain) {
     bgmGain.gain.value = bgmVolume;
   }
+  _bgmParent('setVolume', bgmVolume);
 }
 
 /**
