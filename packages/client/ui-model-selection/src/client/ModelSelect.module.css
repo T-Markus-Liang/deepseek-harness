@@ -15,7 +15,7 @@
      room without letting this trailing control consume the composer. */
   max-width: 220px;
   max-width: min(360px, 45cqw);
-  height: 28px;
+  min-height: 34px;
   padding: 0 4px 0 8px;
   border: none;
   /* Rounded chip chrome, matching the sibling permission trigger. */
@@ -42,7 +42,27 @@
   cursor: default;
 }
 
+.triggerCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+  line-height: 16px;
+}
+
+.triggerProvider {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--dsw-alias-label-caption);
+  font-size: 11px;
+  line-height: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .triggerLabel {
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

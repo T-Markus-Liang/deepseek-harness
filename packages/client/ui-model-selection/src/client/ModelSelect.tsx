@@ -203,12 +203,13 @@ export function ModelSelect(
   }
 
   const modelLabel = currentChoice?.model.name ?? t('trigger.fallback')
-  const triggerLabel = effortLabel === undefined ? modelLabel : `${modelLabel} · ${effortLabel}`
+  const providerLabel = currentChoice?.group.name
+  const triggerLabel = [providerLabel, modelLabel, effortLabel].filter(Boolean).join(' · ')
   const triggerAria = currentChoice === undefined
     ? t('trigger.selectAria')
     : effortLabel === undefined
-      ? t('trigger.aria', { model: modelLabel })
-      : t('trigger.ariaEffort', { model: modelLabel, effort: effortLabel })
+      ? t('trigger.aria', { model: modelLabel, provider: providerLabel ?? '' })
+      : t('trigger.ariaEffort', { model: modelLabel, provider: providerLabel ?? '', effort: effortLabel })
   itemRefs.current = []
   let itemIndex = 0
   const itemRef = () => {
@@ -236,7 +237,10 @@ export function ModelSelect(
           }
         }}
       >
-        <span className={css.triggerLabel}>{modelLabel}</span>
+        <span className={css.triggerCopy}>
+          {providerLabel !== undefined && <span className={css.triggerProvider}>{providerLabel}</span>}
+          <span className={css.triggerLabel}>{modelLabel}</span>
+        </span>
         {effortLabel !== undefined && <span className={css.triggerEffort}>{effortLabel}</span>}
         <IconChevronDownOutline14 className={clsx(css.chevron, open && css.chevronOpen)} />
       </button>
