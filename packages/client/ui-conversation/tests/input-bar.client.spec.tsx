@@ -222,6 +222,20 @@ function attachmentOwner(slotCalls: readonly { key: string; owner: unknown }[]):
   throw new Error('attachment slot was not rendered')
 }
 
+describe('sent-message keyboard history', () => {
+  it('recalls sent messages with ArrowUp and restores the draft with ArrowDown', async () => {
+    const { textarea, shell } = bench()
+    fireEvent.change(textarea, { target: { value: '第一条消息' } })
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+    await vi.waitFor(() => { expect(shell.snapshot.phase).toBe('plain') })
+    fireEvent.change(textarea, { target: { value: '当前草稿' } })
+    fireEvent.keyDown(textarea, { key: 'ArrowUp' })
+    expect(textarea.value).toBe('第一条消息')
+    fireEvent.keyDown(textarea, { key: 'ArrowDown' })
+    expect(textarea.value).toBe('当前草稿')
+  })
+})
+
 describe('image draft rail', () => {
   it('collects clipboard files while preserving text from a mixed paste', () => {
     const addImages = vi.fn(() => null)

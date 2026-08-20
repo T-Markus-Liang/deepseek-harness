@@ -567,6 +567,7 @@ export class InputMachine {
       // survives the commit; edits interleaved with committed content cannot
       // be separated from it, so only a pure suffix is retained.
       const snapshot = flight.attempt.draftSnapshot
+      if (!snapshot.trimStart().startsWith('/')) this.recordHistory(snapshot)
       this.adopt(this.draft !== snapshot && this.draft.startsWith(snapshot)
         ? this.draft.slice(snapshot.length)
         : '')
@@ -602,10 +603,7 @@ export class InputMachine {
   private onSendCommitted(): InputEffect[] {
     if (this.phase !== 'plain') return []
     const projected = projectClipboard(this.state)
-    if (projected.trim() !== '' && this.history[this.history.length - 1] !== projected) {
-      this.history = [...this.history, projected]
-      if (this.history.length > HISTORY_LIMIT) this.history = this.history.slice(1)
-    }
+    this.recordHistory(projected)
     this.historyIndex = -1
     this.historyDraft = ''
     this.claim = undefined
@@ -616,6 +614,13 @@ export class InputMachine {
     this.typingRun = undefined
     this.paste = undefined
     return []
+  }
+
+  /** Add one successful plain message to bounded recall history. */
+  private recordHistory(projected: string): void {
+    if (projected.trim() === '' || this.history[this.history.length - 1] === projected) return
+    this.history = [...this.history, projected]
+    if (this.history.length > HISTORY_LIMIT) this.history = this.history.slice(1)
   }
 
   /**

@@ -957,6 +957,33 @@ describe('input-machine: sent-message history recall', () => {
     expect(m.state.history).toEqual(['first message', 'second message'])
   })
 
+  it('a text send settled through the default sink records the message for recall', () => {
+    const m = new InputMachine()
+    m.dispatch({ type: 'draft-changed', draft: 'first text' })
+    const effect = effectAt(m.dispatch({ type: 'enter', mode: 'queue' }), 0, 'default-sink')
+    m.dispatch({ type: 'submit-settled', attempt: effect.attempt, ok: true })
+    expect(m.state.history).toEqual(['first text'])
+    expect(m.state.historyIndex).toBe(-1)
+    // ↑ browsing works on history recorded by the ordinary send path.
+    m.dispatch({ type: 'history-prev' })
+    expect(m.state.draft).toBe('first text')
+    // A failed send records nothing.
+    const n = new InputMachine()
+    n.dispatch({ type: 'draft-changed', draft: 'never sent' })
+    const failed = effectAt(n.dispatch({ type: 'enter', mode: 'queue' }), 0, 'default-sink')
+    n.dispatch({ type: 'submit-settled', attempt: failed.attempt, ok: false, message: 'boom' })
+    expect(n.state.history).toEqual([])
+  })
+
+  it('a slash command settled through the default sink is not recorded for recall', () => {
+    const m = new InputMachine()
+    m.dispatch({ type: 'draft-changed', draft: '/compact' })
+    const adjudicate = effectAt(m.dispatch({ type: 'enter', mode: 'queue' }), 0, 'adjudicate')
+    const sink = effectAt(m.dispatch({ type: 'adjudicated', attempt: adjudicate.attempt, outcome: undefined }), 0, 'default-sink')
+    m.dispatch({ type: 'submit-settled', attempt: sink.attempt, ok: true })
+    expect(m.state.history).toEqual([])
+  })
+
   it('send-committed records the clipboard projection, never the placeholder draft', () => {
     const m = new InputMachine()
     m.dispatch({ type: 'draft-changed', draft: 'see @wor now' })
