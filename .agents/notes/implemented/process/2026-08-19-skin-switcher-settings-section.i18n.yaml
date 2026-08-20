@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/process/2026-08-19-skin-switcher-settings-section.md
-2026-08-19-skin-switcher-settings-section.md: 3f1d8c17a0f032b9e1e83e3eea7476e3e9ab7932
-2026-08-19-skin-switcher-settings-section.zh.md: 62f6de886cc439ca1b0395bb515afb9b117a9082
+2026-08-19-skin-switcher-settings-section.md: 0f416fab6b7dcc13e078ec1596cffa5fba0d99fd
+2026-08-19-skin-switcher-settings-section.zh.md: 4fd50cac93b52de8fe83410aaef7c8eb936c3062

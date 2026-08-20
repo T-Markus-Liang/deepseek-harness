@@ -14,6 +14,7 @@ export const zh = {
   fail: '加载主题皮肤失败',
 } as const
 
+/** English fallback dictionary for the skin switcher. */
 export const en = {
   nav: 'Theme skins',
   subtitle: 'Installed theme skins appear here; press Activate to switch',
@@ -26,6 +27,8 @@ export const en = {
   fail: 'Failed to load theme skins',
 } as const
 
+/** Keys shared by the Chinese and English skin switcher dictionaries. */
 export type SkinSwitcherKey = keyof typeof zh
 
+/** Locale dictionaries selected by the browser's language. */
 export const skins = { zh, en } as const

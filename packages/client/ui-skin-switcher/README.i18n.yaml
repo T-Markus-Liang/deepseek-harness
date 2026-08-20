@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-skin-switcher/README.md
-README.md: 1306128e7c57ff5a4ff7a3e05a526b5692eabde9
-README.zh.md: a2c19aefd29419a7da737c575538815866663754
+README.md: 81c96321e8a7e9b936793ebe830d3fca781692dc
+README.zh.md: 8b012648439f7b6191c311736bd2c243699d6e5a

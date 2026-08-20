@@ -294,9 +294,9 @@ export class SessionInputShell implements SessionInput {
   }
 
   /**
-   * Step one sent message back (↑). Returns true when the machine's browsing
-   * cursor moved, i.e. the draft was replaced — the caller preventDefaults
-   * and repositions the caret.
+   * Step one sent message back (↑). The caller prevents the browser default
+   * and repositions the caret when this returns true.
+   * @returns whether the browsing cursor moved and the draft changed.
    */
   historyPrev(): boolean {
     const before = this.core.state.historyIndex
@@ -305,9 +305,9 @@ export class SessionInputShell implements SessionInput {
   }
 
   /**
-   * Step one sent message forward (↓). Returns true when the machine's
-   * browsing cursor moved, i.e. the draft was replaced — the caller
-   * preventDefaults and repositions the caret.
+   * Step one sent message forward (↓). The caller prevents the browser default
+   * and repositions the caret when this returns true.
+   * @returns whether the browsing cursor moved and the draft changed.
    */
   historyNext(): boolean {
     const before = this.core.state.historyIndex

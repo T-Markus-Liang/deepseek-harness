@@ -1015,12 +1015,12 @@ describe('input-machine: sent-message history recall', () => {
     // The base draft carries a chip; entering browsing saves it with its occurrences.
     m.dispatch({ type: 'draft-changed', draft: 'see @wor' })
     m.dispatch({ type: 'insert-ref', reference: refOf('worker-1', 'subagent'), span: spanOf(m, 4, 8) })
-    expect(m.state.draft).toBe(`see ${LEGACY_PLACEHOLDER} `)
+    expect(m.state.draft).toBe('see @worker-1 ')
     m.dispatch({ type: 'history-prev' }) // → 'b' (index 1)
     m.dispatch({ type: 'history-prev' }) // → 'a' (index 0)
     m.dispatch({ type: 'history-next' }) // → 'b' (index 1)
     m.dispatch({ type: 'history-next' }) // past newest → restore the base draft
-    expect(m.state).toMatchObject({ historyIndex: -1, draft: `see ${LEGACY_PLACEHOLDER} ` })
+    expect(m.state).toMatchObject({ historyIndex: -1, draft: 'see @worker-1 ' })
     expect(m.state.occurrences).toEqual([expect.objectContaining({ ref: 'worker-1', offset: 4 })])
   })
 

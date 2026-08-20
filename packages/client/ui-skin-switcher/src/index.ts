@@ -17,6 +17,7 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 /** Persistent active-skin choice, written next to the profile's package.json. */
 const STATE_FILE = 'dsh-skins.json'
 
+/** Metadata discovered from an installed theme skin package. */
 export interface SkinInfo {
   /** Skin identity, from `skin.json` `id`. */
   id: string
@@ -32,6 +33,7 @@ export interface SkinInfo {
   package: string
 }
 
+/** Persisted active-skin selection for one profile. */
 export interface SkinState {
   /** `id` of the active skin, or null when the built-in theme is active. */
   active: string | null
@@ -62,7 +64,10 @@ function safeReaddir(dir: string): string[] {
   }
 }
 
-/** Scan profile node_modules for packages carrying a `skin.json` manifest. */
+/** Scan one profile's installed packages for valid skin manifests.
+ * @param profile - profile name whose node_modules directory is scanned.
+ * @returns discovered skin metadata, excluding invalid manifests.
+ */
 export function scanSkins(profile: string): SkinInfo[] {
   const nodeModules = join(profileDir(profile), 'node_modules')
   const found: SkinInfo[] = []
