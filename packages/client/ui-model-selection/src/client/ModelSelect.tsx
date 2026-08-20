@@ -238,7 +238,12 @@ export function ModelSelect(
         }}
       >
         <span className={css.triggerCopy}>
-          {providerLabel !== undefined && <span className={css.triggerProvider}>{providerLabel}</span>}
+          {providerLabel !== undefined && (
+            <>
+              <span className={css.triggerProvider}>{providerLabel}</span>
+              <span className={css.triggerSeparator} aria-hidden="true">·</span>
+            </>
+          )}
           <span className={css.triggerLabel}>{modelLabel}</span>
         </span>
         {effortLabel !== undefined && <span className={css.triggerEffort}>{effortLabel}</span>}
