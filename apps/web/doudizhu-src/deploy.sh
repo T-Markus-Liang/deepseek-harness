@@ -105,6 +105,13 @@ fi
 # 语音同步：从持久源 tts_assets 同步到服务器目录（dist）
 # 注意：绝不能在同步前 rm 源（源是持久目录，不在服务器目录内）
 TTS_SRC="$DOU_DIR/tts_assets"
+if [ -d "$TTS_SRC/tts_cosy_roles" ]; then
+  rm -rf "$DST/tts_cosy_roles"
+  cp -R "$TTS_SRC/tts_cosy_roles" "$DST/tts_cosy_roles"
+  echo "tts_cosy_roles: $(ls $DST/tts_cosy_roles/*.wav | wc -l | tr -d ' ') wav"
+else
+  echo "⚠ 持久源缺少 tts_cosy_roles（先在 tts_models 跑 pregen_cosyvoice3_roles.py）"
+fi
 if [ -d "$TTS_SRC/tts_cosy_it" ]; then
   rm -rf "$DST/tts_cosy_it"
   cp -R "$TTS_SRC/tts_cosy_it" "$DST/tts_cosy_it"

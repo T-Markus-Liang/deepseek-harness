@@ -9,7 +9,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/laohu.jpg',
     tag: '东北大叔',
     personality: 'aggressive',   // 豪爽激进：爱叫地主、爱炸
-    voice: 'laohu'               // 复用东北方言语音库
+    voice: 'laohu'               // 东北男声语音
   },
   {
     id: 'xiaodai',
@@ -17,7 +17,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/xiaodai.jpg',
     tag: '四川大妈',
     personality: 'aggressive',   // 泼辣果断
-    voice: 'xiaodai'             // 复用四川方言语音库
+    voice: 'xiaodai'             // 四川女声语音
   },
   {
     id: 'guangdong',
@@ -25,7 +25,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/guangdong.jpg',
     tag: '粤语女生',
     personality: 'balanced',     // 活泼稳健
-    voice: 'human'               // 复用粤语语音库
+    voice: 'guangdong'           // 粤语女声语音
   },
   {
     id: 'beijing',
@@ -33,7 +33,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/beijing.jpg',
     tag: '北京大爷',
     personality: 'balanced',     // 侃爷稳健
-    voice: 'laohu'               // 复用东北语音库（相近北方口音）
+    voice: 'beijing'             // 北京男声语音
   },
   {
     id: 'shanghai',
@@ -41,7 +41,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/shanghai.jpg',
     tag: '上海阿姨',
     personality: 'conservative', // 精明保守：少叫地主、留大牌
-    voice: 'xiaodai'             // 复用四川语音库
+    voice: 'shanghai'            // 上海女声语音
   },
   {
     id: 'hunan',
@@ -49,7 +49,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/hunan.jpg',
     tag: '湖南辣妹',
     personality: 'aggressive',   // 火辣激进
-    voice: 'human'               // 复用粤语语音库
+    voice: 'hunan'               // 湖南女声语音
   },
   {
     id: 'shandong',
@@ -57,7 +57,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/shandong.jpg',
     tag: '山东大汉',
     personality: 'balanced',     // 憨厚稳健
-    voice: 'laohu'               // 复用东北语音库
+    voice: 'shandong'            // 山东男声语音
   },
   {
     id: 'yunnan',
@@ -65,7 +65,7 @@ const CHARACTER_POOL = [
     avatar: '/avatars/yunnan.jpg',
     tag: '云南阿妹',
     personality: 'conservative', // 温柔保守
-    voice: 'human'               // 复用粤语语音库
+    voice: 'yunnan'              // 云南女声语音
   }
 ];
 

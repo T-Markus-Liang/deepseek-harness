@@ -13,7 +13,7 @@ English | [中文](README.zh.md)
   - `aggressive`（激进）：爱叫地主（叫分 +3）、爱用炸弹（提前炸抢牌权）、不爱过牌
   - `balanced`（稳健）：合理出牌
   - `conservative`（保守）：少叫地主（叫分 -3）、留大牌晚出、对手出大牌倾向过牌保炸弹
-- **方言语音系统**：CosyVoice3 预生成方言台词（东北/四川/粤语），出牌/过牌/叫地主/输赢都有语音，播放失败自动降级 Web Speech
+- **方言语音系统**：CosyVoice3 预生成 8 角色独立语音（每人方言+性格，男/女声区分），出牌/过牌/叫地主/输赢都有语音，播放失败自动降级 Web Speech
 - **QQ 风格 BGM**：小旭音乐背景音乐（父页面播放，Safari/Chrome 自动播放兼容）
 - **积分系统**：初始 1000 分，地主胜 +2×倍率 / 农民 -1×，localStorage 持久化
 - **出牌记录**：顶部"本局出牌记录"历史条，与牌桌牌堆完全独立
@@ -48,10 +48,10 @@ doudizhu-src/
 │   ├── ai.js           # AI 策略（叫分/自由出牌/跟牌，按性格调整）
 │   ├── renderer.js     # 渲染（玩家信息/头像/出牌动画/散乱牌堆/历史/BGM 按钮）
 │   ├── audio.js        # BGM（父页面优先播放，本地 Web Audio fallback）
-│   ├── speech.js       # 语音系统（预生成 wav 播放 + Web Speech 降级）
+│   ├── speech.js       # 语音系统（8 角色独立 wav 播放 + Web Speech 降级）
 │   └── main.js         # 主控（事件绑定、AI 回合、人类出牌、语音触发、BGM 自动启动）
 ├── deploy.sh           # 一键部署到 DSH web 服务器 dist/（路径自动解析）
-├── tts_assets/         # 语音持久源（tts_cosy_it 83 条 + tts_cosy 94 条回退）
+├── tts_assets/         # 语音持久源（tts_cosy_roles 293 条 8 角色 + 旧版回退）
 └── public/             # 插件脚本（doudizhu-plugin.js）、BGM、试听页、角色头像（avatars/）
 ```
 
@@ -151,10 +151,11 @@ cd /Users/markus/deepseek-harness/apps/web/doudizhu-src
 
 ## 语音系统
 
-- **运行时不用任何模型**：纯播放预生成 wav 文件（`/tts_cosy_it/` 83 条 = Fun-CosyVoice3 生成；`/tts_cosy/` 94 条 = CosyVoice2 旧版回退）
-- **播放链**：`speak()` → `speakViaCosy(roleName, text, voiceKey)` → 查 manifest（key = `voice前缀_台词`）→ `playWavAsBlob(url)`（fetch + blob 强制 `audio/wav` + objectURL + 缓存）
-  - `tts_cosy_it` manifest 值是纯文件名 → 拼 `/tts_cosy_it/` + 文件名
-  - `tts_cosy` manifest 值**已含** `/tts_cosy/` 前缀 → 直接用（曾因重复拼接前缀导致 94 条全部失效）
+- **运行时不用任何模型**：纯播放预生成 wav 文件（`/tts_cosy_roles/` 293 条 = Fun-CosyVoice3 按 8 角色性格+方言生成；`/tts_cosy_it/` 83 条与 `/tts_cosy/` 94 条旧版回退）
+- **8 角色独立音色**：每个角色独立参考音色（男/女声）+ 方言指令（东北/北京/山东/四川/上海/湖南/粤语/云南）+ 性格描述指令（豪爽/沉稳/憨厚/泼辣/精明/火辣/俏皮/温柔）+ 场景情感指令（赢得意/输沮丧/炸弹兴奋）
+- **播放链**：`speak()` → `speakViaCosy(roleName, text, voiceKey)` → 查 manifest（key = `voice前缀_台词`，voice = 角色独有 id）→ `playWavAsBlob(url)`（fetch + blob 强制 `audio/wav` + objectURL + 缓存）
+  - `tts_cosy_roles` manifest 值是纯文件名 → 拼 `/tts_cosy_roles/` + 文件名
+  - 优先级：`tts_cosy_roles`（8 角色独立）→ `tts_cosy_it`（3 方言复用）→ `tts_cosy`（CosyVoice2）
 - **降级**：manifest 未命中或 fetch 失败 → `speakViaWebSpeech`（浏览器自带中文语音）
 - 语音生成（离线，在 humanoid-robot 的 tts_models 环境）见 `/Users/markus/humanoid-robot/tts_models/README.md`
 

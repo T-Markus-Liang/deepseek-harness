@@ -3,9 +3,9 @@
 // v5: CosyVoice3 方言角色（东北大叔/四川大妈/粤语女生）+ IndexTTS-2.5 情绪微调
 // 台词文本与 tts_models/lines_table.py 一致（manifest key 匹配预生成音频）
 
-// 角色配置：年龄 + 方言 + 性格 + 台词库
+// 角色配置：年龄 + 方言 + 性格 + 台词库（8 角色独立，与 tts_models/lines_table_roles.py 一致）
 const ROLE_CONFIG = {
-  '老胡': {  // 🧔 东北大叔：粗犷豪爽，东北腔（CosyVoice3 基准 + IndexTTS-2.5 情绪）
+  '老胡': {  // 🧔 东北大叔：粗犷豪爽，东北腔，男声
     voice: 'dongbei',
     tag: '东北大叔',
     lines: {
@@ -28,7 +28,53 @@ const ROLE_CONFIG = {
       lose: ['哎呀妈呀，又输咧！', '下把指定翻盘！']
     }
   },
-  '小呆': {  // 👩 四川大妈：泼辣爽利，四川话
+  '德叔': {  // 🧓 北京大爷：沉稳侃爷，北京话，老年男声
+    voice: 'beijing',
+    tag: '北京大爷',
+    lines: {
+      single: ['单张，走着！', '来张小的！', '这牌这么出，地道！'],
+      pair: ['对儿，齐活！', '俩一样，走你！'],
+      triple: ['仨！', '三条！'],
+      tripleOne: ['三带一！', '仨带个小的！'],
+      tripleTwo: ['三带俩！', '仨带对！'],
+      straight: ['顺子，溜啊！', '连起来了，瓷实！'],
+      doubleStraight: ['连对！', '对子连着走！'],
+      plane: ['飞机！', '这飞机，稳当！'],
+      planeSingle: ['飞机带单！'],
+      planePair: ['飞机带对！'],
+      bomb: ['嘿，炸了！', '这炮仗，响！'],
+      rocket: ['王炸！稳了！', '双王在手，天下我有！'],
+      pass: ['要不起，得嘞！', '过过过！', '歇了！'],
+      bid: ['这牌不错，我抢！', '地主我来当当！'],
+      noBid: ['牌太碎', '先不抢，稳当'],
+      win: ['嘿，赢了！地道！', '咱北京爷们儿，玩的就是稳！'],
+      lose: ['得，输了。', '下把翻盘，走着瞧！']
+    }
+  },
+  '大壮': {  // 💪 山东大汉：憨厚豪迈，山东话，壮年男声
+    voice: 'shandong',
+    tag: '山东大汉',
+    lines: {
+      single: ['来一张！', '单张，走！', '俺出一张！'],
+      pair: ['对子！', '俩一样，中！'],
+      triple: ['三条！', '仨！'],
+      tripleOne: ['三带一！', '仨带一个！'],
+      tripleTwo: ['三带二！', '仨带俩！'],
+      straight: ['顺子！', '连着出，中！'],
+      doubleStraight: ['连对！', '对子连着！'],
+      plane: ['飞机！', '轰隆过去了！'],
+      planeSingle: ['飞机带单！'],
+      planePair: ['飞机带对！'],
+      bomb: ['炸！', '俺这炮仗，够劲儿！', '炸你没商量！'],
+      rocket: ['王炸！', '双王，厉害吧！'],
+      pass: ['要不起！', '中，过！', '先过！'],
+      bid: ['俺抢地主！', '这牌俺要了！'],
+      noBid: ['牌不行', '俺先不抢'],
+      win: ['中！赢了！', '咱山东大汉，打牌就是实在！'],
+      lose: ['哎呀，输了', '下把指定赢回来！']
+    }
+  },
+  '小呆': {  // 👩 四川大妈：泼辣爽利，四川话，成熟女声
     voice: 'sichuan',
     tag: '四川大妈',
     lines: {
@@ -51,12 +97,104 @@ const ROLE_CONFIG = {
       lose: ['搞啥子嘛，又输咯！', '下把再来！']
     }
   },
-  '你': {  // 👧 粤语女生：清脆活泼，广东粤语
+  '王阿姨': {  // 👵 上海阿姨：精明细致，上海话，成熟女声
+    voice: 'shanghai',
+    tag: '上海阿姨',
+    lines: {
+      single: ['出一张喏！', '小牌先走！', '迭张牌，蛮好！'],
+      pair: ['对子来咯！', '两个一样额！'],
+      triple: ['三条！', '三个头！'],
+      tripleOne: ['三带一！', '三个带一个！'],
+      tripleTwo: ['三带二！', '三个带两个！'],
+      straight: ['顺子，清爽！', '一路连下去！'],
+      doubleStraight: ['连对！', '对子连起来！'],
+      plane: ['飞机！', '飞起来咯！'],
+      planeSingle: ['飞机带单！'],
+      planePair: ['飞机带对！'],
+      bomb: ['炸弹！', '炸了依！', '迭记厉害咯！'],
+      rocket: ['王炸！', '双王，结棍！'],
+      pass: ['要不起哦！', '算了，过！', '过过过！'],
+      bid: ['迭把牌蛮好，我抢！', '地主我来做！'],
+      noBid: ['牌一般', '先看看'],
+      win: ['赢咯！蛮灵额！', '阿拉上海人打牌，稳！'],
+      lose: ['哎，输脱了', '下把再赢回来！']
+    }
+  },
+  '辣妹': {  // 💃 湖南辣妹：火辣直接，湖南话，年轻女声
+    voice: 'hunan',
+    tag: '湖南辣妹',
+    lines: {
+      single: ['出一张！', '单张，走你！', '小牌先探路！'],
+      pair: ['对子！', '俩一起，走！'],
+      triple: ['三条！', '仨！'],
+      tripleOne: ['三带一！', '仨带一个！'],
+      tripleTwo: ['三带二！', '仨带俩！'],
+      straight: ['顺子！', '一路顺下去！'],
+      doubleStraight: ['连对！', '对子连起！'],
+      plane: ['飞机！', '飞咯！'],
+      planeSingle: ['飞机带单！'],
+      planePair: ['飞机带对！'],
+      bomb: ['炸死你！', '炸弹，来咯！', '看你往哪跑！'],
+      rocket: ['王炸！', '双王在手，谁怕谁！'],
+      pass: ['要不起！', '过！', '先过你！'],
+      bid: ['我抢地主！', '这牌我要了！'],
+      noBid: ['牌不行', '先不抢'],
+      win: ['哈哈，赢了！', '湖南妹子打牌，辣得很！'],
+      lose: ['哼，输了', '下把再来，不信赢不了！']
+    }
+  },
+  '阿珍': {  // 👧 粤语女生：活泼俏皮，粤语，年轻女声
     voice: 'yue',
     tag: '粤语女生',
     lines: {
+      single: ['出张细牌！', '嚟一张！', '看我嘅！'],
+      pair: ['一对！', '孖住出！'],
+      triple: ['三条！', '三张！'],
+      tripleOne: ['三带一！', '三带一个！'],
+      tripleTwo: ['三带二！', '三带两个！'],
+      straight: ['顺子！', '一条龙！'],
+      doubleStraight: ['连对！', '孖孖连住！'],
+      plane: ['飞机！', '飞起嚟！'],
+      planeSingle: ['飞机带单！'],
+      planePair: ['飞机带对！'],
+      bomb: ['炸弹！', '炸你！', 'boom！'],
+      rocket: ['王炸！', '双王，犀利！'],
+      pass: ['唔该，过！', '要唔起！', '过先啦！'],
+      bid: ['我抢地主！', '呢把我要！'],
+      noBid: ['呢手牌唔得', '先睇下先'],
+      win: ['哈哈，赢咗啦！', '呢把实赢！'],
+      lose: ['唉，又输咗咯！', '唔紧要，再嚟！']
+    }
+  },
+  '阿妹': {  // 👸 云南阿妹：温柔腼腆，云南话，年轻女声
+    voice: 'yunnan',
+    tag: '云南阿妹',
+    lines: {
+      single: ['出一张咯！', '来张小牌！', '慢慢出！'],
+      pair: ['对子！', '两个一起！'],
+      triple: ['三条！', '三个一样！'],
+      tripleOne: ['三带一！', '三个带一个！'],
+      tripleTwo: ['三带二！', '三个带两个！'],
+      straight: ['顺子！', '连着出！'],
+      doubleStraight: ['连对！', '对子连着！'],
+      plane: ['飞机！', '飞过去咯！'],
+      planeSingle: ['飞机带单！'],
+      planePair: ['飞机带对！'],
+      bomb: ['炸弹！', '炸咯！', '厉害吧！'],
+      rocket: ['王炸！', '双王！'],
+      pass: ['要不起！', '过咯！', '先过！'],
+      bid: ['我抢地主！', '这牌我要咯！'],
+      noBid: ['牌不好', '先不抢'],
+      win: ['嘻嘻，赢了！', '云南阿妹运气好！'],
+      lose: ['哎呀，输了', '下次再来！']
+    }
+  },
+  '你': {  // 😎 玩家本人：轻松愉快，粤语俏皮
+    voice: 'you',
+    tag: '玩家',
+    lines: {
       play: ['出张细牌！', '嚟一张！', '看我嘅！'],
-      pass: ['唔该，过！', '要唔起！'],
+      pass: ['唔该，过！', '要唔起！', '过先啦！'],
       bid: ['我抢地主！', '呢把我要！'],
       noBid: ['呢手牌唔得', '先睇下先'],
       win: ['哈哈，赢咗啦！', '呢把实赢！'],
@@ -76,27 +214,36 @@ const ROLE_TTS_VOICES = {
 const SPEECH_LINES = ROLE_CONFIG['小呆'].lines;
 const HUMAN_LINES = ROLE_CONFIG['你'].lines;
 
-// ===== 开源 TTS 预生成音频（IndexTTS-2 主打 + CosyVoice2 彩蛋）=====
-// IndexTTS-2（B站2025，自然度SOTA，方言克隆）生成主打台词到 /tts_cosy_it/
-// CosyVoice2 生成彩蛋方言台词（粤语/四川腔）到 /tts_cosy/
-const IT_MANIFEST_URL = '/tts_cosy_it/manifest.json';   // IndexTTS-2（优先）
-const COSY_MANIFEST_URL = '/tts_cosy/manifest.json';    // CosyVoice2 彩蛋（回退）
-const COSY_VOICE_MAP = { '小呆': 'xiaodai', '老胡': 'laohu', '你': 'human' };
+// ===== 开源 TTS 预生成音频（CosyVoice3 8 角色主打 + 旧版回退）=====
+// CosyVoice3 生成 8 角色独立语音（方言+性格）到 /tts_cosy_roles/
+// 旧版 tts_cosy_it（3 方言复用）与 tts_cosy（CosyVoice2）保留作回退
+const ROLES_MANIFEST_URL = '/tts_cosy_roles/manifest.json';  // 8 角色独立语音（优先）
+const IT_MANIFEST_URL = '/tts_cosy_it/manifest.json';        // 3 方言复用（回退）
+const COSY_MANIFEST_URL = '/tts_cosy/manifest.json';         // CosyVoice2 彩蛋（回退）
+// 角色名 -> voice 前缀（manifest key 前缀）；characters.js 的 voice 字段同值
+const COSY_VOICE_MAP = {
+  '小呆': 'xiaodai', '老胡': 'laohu', '你': 'you',
+  '德叔': 'beijing', '王阿姨': 'shanghai', '辣妹': 'hunan',
+  '大壮': 'shandong', '阿珍': 'guangdong', '阿妹': 'yunnan'
+};
+let rolesManifest = null;
 let itManifest = null;
 let cosyManifest = null;
 let cosyEnabled = false;
 
 /**
- * 加载预生成音频清单（IndexTTS-2 + CosyVoice2 两份）
+ * 加载预生成音频清单（8 角色 + 3 方言 + CosyVoice2 三份）
  */
 function loadCosyManifest() {
   return Promise.all([
+    fetch(ROLES_MANIFEST_URL, { mode: 'cors' }).then(r => r.ok ? r.json() : null).catch(() => null),
     fetch(IT_MANIFEST_URL, { mode: 'cors' }).then(r => r.ok ? r.json() : null).catch(() => null),
     fetch(COSY_MANIFEST_URL, { mode: 'cors' }).then(r => r.ok ? r.json() : null).catch(() => null)
-  ]).then(([itM, cosyM]) => {
+  ]).then(([rolesM, itM, cosyM]) => {
+    rolesManifest = rolesM && Object.keys(rolesM).length > 0 ? rolesM : null;
     itManifest = itM && Object.keys(itM).length > 0 ? itM : null;
     cosyManifest = cosyM && Object.keys(cosyM).length > 0 ? cosyM : null;
-    cosyEnabled = !!(itManifest || cosyManifest);
+    cosyEnabled = !!(rolesManifest || itManifest || cosyManifest);
     return cosyEnabled;
   });
 }
@@ -132,19 +279,23 @@ function playWavAsBlob(url, onFail) {
 
 function speakViaCosy(roleName, text, voiceKey) {
   if (!cosyEnabled) return false;
-  // 优先用 voiceKey（laohu/xiaodai/human，新角色按 voice 映射），否则按角色名查 COSY_VOICE_MAP
+  // 优先用 voiceKey（8 角色独立 voice 前缀），否则按角色名查 COSY_VOICE_MAP
   const voicePrefix = voiceKey || COSY_VOICE_MAP[roleName];
   if (!voicePrefix) return false;
   const cosyKey = voicePrefix + '_' + text;
   const fallback = () => speakViaWebSpeech(text, 1.0, 1.0);
-  // 1. IndexTTS-2.5（方言克隆+情绪，最自然）
-  if (itManifest && itManifest[cosyKey]) {
-    playWavAsBlob('/tts_cosy_it/' + itManifest[cosyKey], fallback);  // manifest 值是文件名，需加 /tts_cosy_it/ 前缀
+  // 1. CosyVoice3 8 角色独立语音（方言+性格，最自然）
+  if (rolesManifest && rolesManifest[cosyKey]) {
+    playWavAsBlob('/tts_cosy_roles/' + rolesManifest[cosyKey], fallback);
     return true;
   }
-  // 2. CosyVoice2（彩蛋方言：粤语/四川）
+  // 2. CosyVoice3 3 方言复用（回退）
+  if (itManifest && itManifest[cosyKey]) {
+    playWavAsBlob('/tts_cosy_it/' + itManifest[cosyKey], fallback);
+    return true;
+  }
+  // 3. CosyVoice2 彩蛋（回退）
   if (cosyManifest && cosyManifest[cosyKey]) {
-    // manifest 值已含 /tts_cosy/ 前缀（与 tts_cosy_it 的纯文件名格式不同），直接使用
     playWavAsBlob(cosyManifest[cosyKey], fallback);
     return true;
   }
@@ -365,10 +516,15 @@ function _randomLine(lines) {
 function _roleLines(playerName, cosyVoice) {
   const role = ROLE_CONFIG[playerName];
   if (role) return role;
-  // 新角色（随机对手）：按 voice 映射到现有语音库（台词库复用）
-  if (cosyVoice === 'laohu') return ROLE_CONFIG['老胡'];
-  if (cosyVoice === 'xiaodai') return ROLE_CONFIG['小呆'];
-  // 兜底：老胡台词库完整（含全部牌型行），避免落到只有 play/pass 的'你'导致牌型行缺失
+  // 新角色（随机对手）：按 voice 映射到对应角色台词库
+  const voiceToRole = {
+    'laohu': '老胡', 'beijing': '德叔', 'shandong': '大壮',
+    'xiaodai': '小呆', 'shanghai': '王阿姨', 'hunan': '辣妹',
+    'guangdong': '阿珍', 'yunnan': '阿妹', 'you': '你'
+  };
+  const mapped = voiceToRole[cosyVoice];
+  if (mapped && ROLE_CONFIG[mapped]) return ROLE_CONFIG[mapped];
+  // 兜底：老胡台词库完整（含全部牌型行）
   return ROLE_CONFIG['老胡'];
 }
 
