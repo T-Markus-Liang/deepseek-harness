@@ -1,0 +1,8 @@
+# Orchestrator adds explicit, namespaced policy tools. It does not alter
+# root-agent fallback configuration, base subagent tools, or dsh-image-text-bridge.
+- insert:
+    - id: dsh-subagent-orchestrator
+      name: dsh-subagent-orchestrator
+      config:
+        retentionDays: 14
+        retentionCount: 100
